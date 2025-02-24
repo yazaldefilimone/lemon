@@ -4,24 +4,21 @@ fn println(value: i32) = {
   printf("%d\n", value);
 }
 
-
-// fn print_hello() = {
-//   printf("Hello, lemon!\n");
-// }
+fn print_hello() = {
+  printf("Hello, lemon!\n");
+}
 
 fn fibonacci(value: i32): i32 = {
   if (value <= 1) return value;
   return fibonacci(value - 1) + fibonacci(value - 2)
 }
 
-
-
 fn main() = {
-  let result = 10 + 20 + 30;
-  println(result);
+  let add: i32 = 10 + 20 + 30;
+  println(add);
 
-  let fib_result = fibonacci(10);
-  println(fib_result);
+  let fib: i32 = fibonacci(10);
+  println(fib);
 
-  // print_hello();
+  print_hello();
 }

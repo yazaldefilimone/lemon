@@ -1,0 +1,5 @@
+extern fn printf(fmt: str,...): i32 = {}
+fn main() = {
+  let name = "John Doe";
+  printf("%s\n", name);
+}
