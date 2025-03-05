@@ -19,7 +19,7 @@ mod report;
 mod source;
 
 use checker::{context::Context, Checker};
-use compiler::{compile, run};
+use compiler::compile;
 use diag::DiagGroup;
 use lexer::Token;
 use loader::Loader;
@@ -37,7 +37,7 @@ fn check(path_name: &str) {
 		Ok(ast) => ast,
 		Err(diag) => diag.report_syntax_err_wrap(source),
 	};
-	let mut diag_group = DiagGroup::new(&loader);
+	let mut diag_group = DiagGroup::new();
 	let mut ctx = Context::new();
 	let mut checker = Checker::new(&mut diag_group, &mut ctx);
 	let _ = match checker.check_program(&mut ast) {
@@ -95,9 +95,10 @@ fn main() {
 			let path_name = matches.get_one::<String>("file").unwrap();
 			lex(path_name);
 		}
-		Some(("run", matches)) => {
-			let path_name = matches.get_one::<String>("file").unwrap();
-			run(path_name);
+		Some(("run", _matches)) => {
+			// let path_name = matches.get_one::<String>("file").unwrap();
+			todo!("run command is not implemented yet");
+			// run(path_name);
 		}
 
 		Some(("token", matches)) => {

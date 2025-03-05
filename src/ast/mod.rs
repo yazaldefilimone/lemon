@@ -119,6 +119,7 @@ pub struct ConstFnStmt {
 	pub range: Range,    // const range
 	pub fn_range: Range, // fn range
 	pub ret_id: Option<TypeId>,
+	pub is_pub: bool,
 }
 
 impl ConstFnStmt {
@@ -134,6 +135,13 @@ impl ConstFnStmt {
 	}
 	pub fn get_ret_id(&self) -> Option<TypeId> {
 		self.ret_id
+	}
+
+	pub fn has_pub(&mut self) {
+		self.is_pub = true;
+	}
+	pub fn is_pub(&self) -> bool {
+		self.is_pub
 	}
 }
 
@@ -250,6 +258,7 @@ pub struct ConstDelStmt {
 	pub name: Binding,
 	pub expr: Expr,
 	pub range: Range, // let range
+	pub is_pub: bool,
 	pub type_id: Option<TypeId>,
 }
 
@@ -257,6 +266,11 @@ impl ConstDelStmt {
 	pub fn lexeme(&self) -> &str {
 		&self.name.ident.text
 	}
+
+	pub fn has_pub(&mut self) {
+		self.is_pub = true;
+	}
+
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.name.get_range().merged_with(&self.expr.get_range()))
 	}

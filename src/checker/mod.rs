@@ -43,11 +43,11 @@ type TyResult<T> = Result<T, Diag>;
 
 pub struct Checker<'ckr> {
 	ctx: &'ckr mut Context,
-	diag_group: &'ckr mut DiagGroup<'ckr>,
+	diag_group: &'ckr mut DiagGroup,
 }
 
 impl<'ckr> Checker<'ckr> {
-	pub fn new(diag_group: &'ckr mut DiagGroup<'ckr>, ctx: &'ckr mut Context) -> Self {
+	pub fn new(diag_group: &'ckr mut DiagGroup, ctx: &'ckr mut Context) -> Self {
 		Self { ctx, diag_group }
 	}
 

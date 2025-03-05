@@ -6,16 +6,17 @@ impl<'l> Parser<'l> {
 	#[rustfmt::skip]
 	pub fn parse_type(&mut self) -> PResult<'l, ast::AstType> {
 		match self.token {
-			Some(Token::BoolType) => self.parse_bool_type().map(ast::AstType::Bool),
-			Some(Token::VoidType) => self.parse_void_type().map(ast::AstType::Void),
-			Some(Token::CharType) => self.parse_char_type().map(ast::AstType::Char),
+			Some(Token::BoolType)   =>   self.parse_bool_type().map(ast::AstType::Bool),
+			Some(Token::VoidType)   =>   self.parse_void_type().map(ast::AstType::Void),
+			Some(Token::CharType)   =>   self.parse_char_type().map(ast::AstType::Char),
 			Some(Token::StringType) => self.parse_string_type().map(ast::AstType::String),
-			Some(Token::StrType) => self.parse_str_type().map(ast::AstType::Str),
-			Some(Token::Ident) => self.parse_ident_type().map(ast::AstType::Ident),
-			Some(Token::Fn) => self.parse_fn_type().map(ast::AstType::Fn),
-			Some(Token::And) => self.parse_borrow_type().map(ast::AstType::Borrow),
+			Some(Token::StrType)    =>  self.parse_str_type().map(ast::AstType::Str),
+			Some(Token::Ident)      => self.parse_ident_type().map(ast::AstType::Ident),
+			Some(Token::Fn)         => self.parse_fn_type().map(ast::AstType::Fn),
+			Some(Token::And)        => self.parse_borrow_type().map(ast::AstType::Borrow),
 
-			Some(Token::F32Type) | Some(Token::F64Type) => self.parse_float_type().map(ast::AstType::Float),
+			Some(Token::F32Type)
+			| Some(Token::F64Type) => self.parse_float_type().map(ast::AstType::Float),
 
 			Some(Token::I8Type)      | Some(Token::U8Type)
 			| Some(Token::I16Type)   | Some(Token::U16Type)
@@ -59,13 +60,14 @@ impl<'l> Parser<'l> {
 	}
 	fn parse_numb_type(&mut self) -> PResult<'l, ast::NumberType> {
 		match self.token {
+			// todo: check if isize/usize is 32 or 64 bits or use platform?
 			Some(Token::IsizeType) => {
 				let range = self.expect(Token::IsizeType)?.clone();
-				Ok(ast::NumberType { range, bits: 0, signed: true })
+				Ok(ast::NumberType { range, bits: 32, signed: true })
 			}
 			Some(Token::UsizeType) => {
 				let range = self.expect(Token::UsizeType)?.clone();
-				Ok(ast::NumberType { range, bits: 0, signed: false })
+				Ok(ast::NumberType { range, bits: 32, signed: false })
 			}
 			Some(Token::I8Type) => {
 				let range = self.expect(Token::I8Type)?.clone();

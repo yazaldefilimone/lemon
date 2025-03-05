@@ -6,18 +6,15 @@ use crate::{
 	cross::Cross,
 	diag::DiagGroup,
 	disassembler::Disassembler,
-	lexer::Token,
 	linker::Linker,
 	llvm,
 	loader::Loader,
-	parser::Parser,
 	report::throw_cross_compile_error,
 };
 
 use clap::ArgMatches;
 use console::{Style, Term};
 use inkwell::targets::FileType;
-use logos::Logos;
 use target_lexicon::HOST;
 
 pub fn execute_term(respose: io::Result<()>, text: &str) {
@@ -41,37 +38,28 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	let style = Style::new();
 	let compile_green_text = style.green().apply_to("compiling...").bold();
 	write_in_term(&term, compile_green_text.to_string(), false);
+
 	let mut loader = Loader::new();
 	let file_id = loader.load(path_name);
-	let source = loader.get_source(file_id);
+	let source = loader.get_source(file_id).clone();
+	let ast = loader.get_program(file_id);
 
-	let mut lexer = Token::lexer(source.raw());
-	let mut parser = Parser::new(&mut lexer, file_id);
-
-	let mut ast = match parser.parse_program() {
-		Ok(ast) => ast,
-		Err(diag) => diag.report_syntax_err_wrap(source),
-	};
-
-	// print ln!("{:#?}", ast);
-
-	let mut diag_group = DiagGroup::new(&loader);
-
+	let mut diag_group = DiagGroup::new();
 	let mut ctx = Context::new();
 
 	// check
 	write_in_term(&term, " check...", false);
 	let mut checker = Checker::new(&mut diag_group, &mut ctx);
-	let _ = match checker.check_program(&mut ast) {
+	let _ = match checker.check_program(ast) {
 		Ok(tyy) => tyy,
-		Err(diag) => diag.report_type_err_wrap(source),
+		Err(diag) => diag.report_type_err_wrap(&source),
 	};
 
 	// emit lnr
 	//
 	write_in_term(&term, " emit lnr...", true);
-	let mut ir_builder = Builder::new(&ctx.type_store, source);
-	let ir = ir_builder.build(&mut ast);
+	let mut ir_builder = Builder::new(&ctx.type_store, &source);
+	let ir = ir_builder.build(ast);
 
 	// optimize::optimize(&mut ir);
 
@@ -88,7 +76,7 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	//
 	write_in_term(&term, " emit llvm...", true);
 	let llvm_context = inkwell::context::Context::create();
-	let llvm_module = llvm::create_module_from_source(&llvm_context, source);
+	let llvm_module = llvm::create_module_from_source(&llvm_context, &source);
 	let mut llvm = llvm::Llvm::new(&llvm_context, llvm_module, &ctx.type_store);
 	llvm.compile_ir(&ir);
 	if matches.get_flag("llr") {
@@ -133,61 +121,61 @@ fn generate_output_filename(path: &Path) -> String {
 	format!("{}.o", file_name_without_ext)
 }
 
-pub fn run(path_name: &str) {
-	let mut loader = Loader::new();
-	let file_id = loader.load(path_name);
-	let source = loader.get_source(file_id);
-	let mut lexer = Token::lexer(source.raw());
-	let mut parser = Parser::new(&mut lexer, file_id);
-	let mut ast = match parser.parse_program() {
-		Ok(ast) => ast,
-		Err(diag) => diag.report_syntax_err_wrap(source),
-	};
+// pub fn run(path_name: &str) {
+// 	let mut loader = Loader::new();
+// 	let file_id = loader.load(path_name);
+// 	let source = loader.get_source(file_id);
+// 	let mut lexer = Token::lexer(source.raw());
+// 	let mut parser = Parser::new(&mut lexer, file_id);
+// 	let mut ast = match parser.parse_program() {
+// 		Ok(ast) => ast,
+// 		Err(diag) => diag.report_syntax_err_wrap(source),
+// 	};
 
-	let mut diag_group = DiagGroup::new(&loader);
+// 	let mut diag_group = DiagGroup::new(&loader);
 
-	let mut ctx = Context::new();
+// 	let mut ctx = Context::new();
 
-	// check
+// 	// check
 
-	println!("check...");
-	let mut checker = Checker::new(&mut diag_group, &mut ctx);
-	let _ = match checker.check_program(&mut ast) {
-		Ok(tyy) => tyy,
-		Err(diag) => diag.report_type_err_wrap(source),
-	};
-	// emit lnr
-	//
-	println!("emit lnr...");
-	let mut ir_builder = Builder::new(&ctx.type_store, source);
-	let ir = ir_builder.build(&mut ast);
+// 	println!("check...");
+// 	let mut checker = Checker::new(&mut diag_group, &mut ctx);
+// 	let _ = match checker.check_program(&mut ast) {
+// 		Ok(tyy) => tyy,
+// 		Err(diag) => diag.report_type_err_wrap(source),
+// 	};
+// 	// emit lnr
+// 	//
+// 	println!("emit lnr...");
+// 	let mut ir_builder = Builder::new(&ctx.type_store, source);
+// 	let ir = ir_builder.build(&mut ast);
 
-	println!("emit llvm...");
-	let llvm_context = inkwell::context::Context::create();
-	let llvm_module = llvm::create_module_from_source(&llvm_context, source);
-	let mut llvm = llvm::Llvm::new(&llvm_context, llvm_module, &ctx.type_store);
-	llvm.compile_ir(&ir);
+// 	println!("emit llvm...");
+// 	let llvm_context = inkwell::context::Context::create();
+// 	let llvm_module = llvm::create_module_from_source(&llvm_context, source);
+// 	let mut llvm = llvm::Llvm::new(&llvm_context, llvm_module, &ctx.type_store);
+// 	llvm.compile_ir(&ir);
 
-	// cross compile
+// 	// cross compile
 
-	println!("emit '{}' binary...", HOST.architecture);
-	let triple = HOST.to_string();
-	let cross = Cross::new(&triple);
+// 	println!("emit '{}' binary...", HOST.architecture);
+// 	let triple = HOST.to_string();
+// 	let cross = Cross::new(&triple);
 
-	let output = generate_output_filename(&source.pathbuf);
-	let output_path = Path::new(&output);
+// 	let output = generate_output_filename(&source.pathbuf);
+// 	let output_path = Path::new(&output);
 
-	match cross.emit(&llvm.module, FileType::Object, output_path) {
-		Ok(_) => {}
-		Err(err) => throw_cross_compile_error(err),
-	}
+// 	match cross.emit(&llvm.module, FileType::Object, output_path) {
+// 		Ok(_) => {}
+// 		Err(err) => throw_cross_compile_error(err),
+// 	}
 
-	// link
-	//
-	println!("linking...");
-	let linker = Linker::new(output_path.to_path_buf());
-	let bin = linker.link();
-	let command = format!("./{}", bin);
-	println!("running...");
-	std::process::Command::new("sh").arg("-c").arg(command).status().unwrap();
-}
+// 	// link
+// 	//
+// 	println!("linking...");
+// 	let linker = Linker::new(output_path.to_path_buf());
+// 	let bin = linker.link();
+// 	let command = format!("./{}", bin);
+// 	println!("running...");
+// 	std::process::Command::new("sh").arg("-c").arg(command).status().unwrap();
+// }

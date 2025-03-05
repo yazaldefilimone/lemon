@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-
 use core::fmt;
 
 use crate::{
@@ -89,24 +88,29 @@ impl Diag {
 	}
 }
 
-pub struct DiagGroup<'ckr> {
+pub struct DiagGroup {
 	pub diags: Vec<Diag>,
-	pub loader: &'ckr Loader,
 }
 
-impl<'ckr> DiagGroup<'ckr> {
-	pub fn new(loader: &'ckr Loader) -> Self {
-		Self { diags: Vec::new(), loader }
+impl DiagGroup {
+	pub fn new() -> Self {
+		Self { diags: Vec::new() }
 	}
 	pub fn add(&mut self, diag: Diag) {
 		self.diags.push(diag);
 	}
 
-	pub fn report(&self) {
+	pub fn report(&self, loader: &Loader) {
 		for diag in &self.diags {
-			let source = self.loader.get_source(diag.file_id);
+			let source = loader.get_source(diag.file_id);
 			diag.report_err(source);
 		}
+	}
+}
+
+impl Default for DiagGroup {
+	fn default() -> Self {
+		Self::new()
 	}
 }
 
