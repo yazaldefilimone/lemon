@@ -50,7 +50,7 @@ pub fn throw_error_with_range(text: impl Into<String>, range: Range, source: &So
 	let err = codelighter::highlight_error(start, end, source.raw());
 	let slug = text_red("error");
 	println!("{}: {}", slug, text.into()); // -- message
-	println!("---> {}", text_white(source.path_str().as_str())); // -- filename
+	println!("---> {}", text_white(source.pathname())); // -- filename
 	println!("{}", err);
 	std::process::exit(1);
 }
@@ -61,7 +61,7 @@ fn report(diag: &Diag, kind: ReportKind, source: &Source) {
 		Severity::Note => text_green("info"),
 	};
 	println!("{}: {}", slug, diag.message); // -- message
-	println!("---> {}", text_white(source.path_str().as_str())); // -- filename
+	println!("---> {}", text_white(source.pathname())); // -- filename
 	let start = diag.range.start;
 	let end = diag.range.end;
 	let code = match diag.severity {

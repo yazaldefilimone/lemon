@@ -27,6 +27,19 @@ impl Range {
 	pub fn from_span(span: Span) -> Range {
 		Range::new(span.start, span.end)
 	}
+	pub fn is_empty(&self) -> bool {
+		self.start == self.end
+	}
+
+	pub fn is_valid(&self) -> bool {
+		if self.start > self.end {
+			return false;
+		}
+		if self.start == self.end && self.start == 0 {
+			return false;
+		}
+		true
+	}
 }
 
 impl fmt::Display for Range {

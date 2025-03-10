@@ -3,7 +3,7 @@ use logos::Lexer;
 use crate::ast::{self, AstType, OperatorKind, BASE_BIN, BASE_DECIMAL, BASE_HEX, MIN_PDE};
 use crate::diag::Diag;
 use crate::lexer::Token;
-use crate::loader::FileId;
+use crate::loader::{Loader, ModuleId};
 use crate::range::Range;
 mod parse_type;
 
@@ -15,18 +15,23 @@ pub struct Parser<'lex> {
 	pub lex: &'lex mut Lexer<'lex, Token>,
 	token: Option<Token>,
 	range: Range,
-	file_id: FileId,
+	module_id: ModuleId,
+	loader: &'lex mut Loader,
 }
 // --- parser  -----
 
 type PResult<'lex, T> = Result<T, Diag>;
 
 impl<'lex> Parser<'lex> {
-	pub fn new(lex: &'lex mut Lexer<'lex, Token>, file_id: FileId) -> Self {
+	pub fn new(
+		lex: &'lex mut Lexer<'lex, Token>,
+		module_id: ModuleId,
+		loader: &'lex mut Loader,
+	) -> Self {
 		// todo: remove unwrap
 		let token = lex.next().map(|t| t.unwrap());
 		let range = Range::from_span(lex.span());
-		Self { lex, token, range, file_id }
+		Self { lex, token, range, module_id, loader }
 	}
 	pub fn parse_program(&mut self) -> PResult<'lex, ast::Program> {
 		let mut stmts = vec![];
@@ -89,6 +94,15 @@ impl<'lex> Parser<'lex> {
 				extern_fn_stmt.set_is_pub(true);
 				Ok(ast::Stmt::ExternFn(extern_fn_stmt))
 			}
+			Some(Token::Const) => {
+				let mut const_stmt = self.parse_const_stmt()?;
+				match const_stmt {
+					ast::Stmt::ConstFn(ref mut const_fn_stmt) => const_fn_stmt.has_pub(),
+					ast::Stmt::ConstDel(ref mut const_del_stmt) => const_del_stmt.has_pub(),
+					_ => unreachable!(),
+				}
+				Ok(const_stmt)
+			}
 			Some(Token::Type) => {
 				let mut type_def_stmt = self.parse_type_def_stmt()?;
 				type_def_stmt.set_is_pub(true);
@@ -96,7 +110,7 @@ impl<'lex> Parser<'lex> {
 			}
 			_ => {
 				let diag = Diag::error("expected fn, extern or type", self.range.clone());
-				Err(diag.with_file_id(self.file_id))
+				Err(diag.with_module_id(self.module_id))
 			}
 		}
 	}
@@ -152,14 +166,23 @@ impl<'lex> Parser<'lex> {
 		}
 		self.expect(Token::Assign)?; // take '='
 		let body = self.parse_fn_body()?;
-		Ok(ast::ConstFnStmt { name, params, ret_type, body, range, fn_range, ret_id: None })
+		Ok(ast::ConstFnStmt {
+			name,
+			params,
+			ret_type,
+			body,
+			range,
+			fn_range,
+			ret_id: None,
+			is_pub: false,
+		})
 	}
 
 	fn parse_const_del_stmt(&mut self, range: Range) -> PResult<'lex, ast::ConstDelStmt> {
 		let name = self.parse_binding(false)?;
 		self.expect(Token::Assign)?; // take '='
 		let expr = self.parse_expr(MIN_PDE)?;
-		Ok(ast::ConstDelStmt { name, expr, range, type_id: None })
+		Ok(ast::ConstDelStmt { name, expr, range, type_id: None, is_pub: false })
 	}
 
 	// type <name> = {} or type <name> = <type>
@@ -453,7 +476,7 @@ impl<'lex> Parser<'lex> {
 		}
 		//
 		let diag = self.custom_diag("expected struct name", &expr.get_range());
-		Err(diag.with_file_id(self.file_id))
+		Err(diag.with_module_id(self.module_id))
 	}
 
 	// ::<expr>
@@ -464,7 +487,7 @@ impl<'lex> Parser<'lex> {
 			Ok(ast::Expr::Associate(ast::AssociateExpr { self_name, method, range, self_type: None }))
 		} else {
 			let diag = self.custom_diag("expected identifier", &expr.get_range());
-			Err(diag.with_file_id(self.file_id))
+			Err(diag.with_module_id(self.module_id))
 		}
 	}
 
@@ -477,6 +500,13 @@ impl<'lex> Parser<'lex> {
 	}
 
 	// import("std/mem.ln", os = "windows")
+	//
+	//
+	// main.ln -> min.ln
+	// or
+	// main.ln -> std(mod.ln) -> max.ln
+	//
+	//
 	fn parse_import_expr(&mut self) -> PResult<'lex, ast::ImportExpr> {
 		let range = self.expect(Token::Import)?;
 		self.expect(Token::LParen)?;
@@ -484,8 +514,14 @@ impl<'lex> Parser<'lex> {
 			ast::Literal::String(string) => string,
 			_ => return Err(self.unexpected_token()),
 		};
-		self.expect(Token::RParen)?;
-		Ok(ast::ImportExpr { path, range })
+		let end = self.expect(Token::RParen)?;
+		let path_str = path.text.clone();
+		let max_range = range.merged_with(&end);
+		let module_id = match self.loader.resolve_module(path_str, self.module_id) {
+			Ok(module_id) => module_id,
+			Err(message) => return Err(self.custom_diag(message, &max_range)),
+		};
+		Ok(ast::ImportExpr { path, range, module_id: Some(module_id) })
 	}
 	// &mut <expr>
 	fn parse_borrow_expr(&mut self) -> PResult<'lex, ast::BorrowExpr> {
@@ -553,7 +589,7 @@ impl<'lex> Parser<'lex> {
 				_ => {
 					let message = format!("unknown escape sequence '\\{}'", char);
 					let diag = self.custom_diag(message, range);
-					return Err(diag.with_file_id(self.file_id));
+					return Err(diag.with_module_id(self.module_id));
 				}
 			}
 		}
@@ -650,7 +686,7 @@ impl<'lex> Parser<'lex> {
 		// include "'"
 		if self.take_text().len() > 3 {
 			let diag = Diag::error("expected char literal", self.range.clone());
-			return Err(diag.with_file_id(self.file_id));
+			return Err(diag.with_module_id(self.module_id));
 		}
 		Ok(())
 	}
@@ -672,7 +708,7 @@ impl<'lex> Parser<'lex> {
 		if self.match_token(Token::And) {
 			if !with_self {
 				let diag = self.custom_diag("unexpected token '&'", &self.range);
-				return Err(diag.with_file_id(self.file_id));
+				return Err(diag.with_module_id(self.module_id));
 			}
 
 			let ast_type = self.parse_type()?;
@@ -683,7 +719,7 @@ impl<'lex> Parser<'lex> {
 				}
 			}
 			let diag = self.custom_diag("expected ident", &self.range);
-			return Err(diag.with_file_id(self.file_id));
+			return Err(diag.with_module_id(self.module_id));
 		}
 
 		let ident = self.parse_ident()?;
@@ -750,7 +786,7 @@ impl<'lex> Parser<'lex> {
 			// todo: add error message
 			let peeked = self.token.map(|t| t.to_string()).unwrap_or_else(|| "unkown".to_string());
 			let diag = Diag::error(format!("expected {} but got {}", token, peeked), self.range.clone());
-			return Err(diag.with_file_id(self.file_id));
+			return Err(diag.with_module_id(self.module_id));
 		}
 		let range = self.range.clone();
 		self.next()?;
@@ -765,12 +801,12 @@ impl<'lex> Parser<'lex> {
 		if let Some(token) = self.token {
 			let message = format!("unexpected token '{}'", token);
 			let diag = Diag::error(message, self.range.clone());
-			return diag.with_file_id(self.file_id);
+			return diag.with_module_id(self.module_id);
 		}
 		self.custom_diag("unsupported token", &self.range)
 	}
 
 	pub fn custom_diag(&self, message: impl Into<String>, range: &Range) -> Diag {
-		Diag::error(message, range.clone()).with_file_id(self.file_id)
+		Diag::error(message, range.clone()).with_module_id(self.module_id)
 	}
 }

@@ -1,9 +1,8 @@
 #![allow(dead_code)]
-
 use core::fmt;
 
 use crate::{
-	loader::{FileId, Loader},
+	loader::{Loader, ModuleId},
 	range::Range,
 	report::{self},
 	source::Source,
@@ -18,7 +17,7 @@ pub enum Severity {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Diag {
-	pub file_id: FileId,
+	pub module_id: ModuleId,
 	pub severity: Severity,
 	pub message: String,
 	pub note: Option<String>,
@@ -27,8 +26,8 @@ pub struct Diag {
 
 impl Diag {
 	pub fn new(severity: Severity, message: String, range: Range) -> Self {
-		let file_id = FileId::new(u64::MAX);
-		Self { file_id, severity, message, note: None, range }
+		let module_id = ModuleId::new(u64::MAX);
+		Self { module_id, severity, message, note: None, range }
 	}
 
 	pub fn error(message: impl Into<String>, range: Range) -> Self {
@@ -39,12 +38,20 @@ impl Diag {
 		Self::new(Severity::Warn, message.into(), range)
 	}
 
+	pub fn error_without_range(message: impl Into<String>) -> Self {
+		Self::error(message, Range::default())
+	}
+
+	pub fn warning_without_range(message: impl Into<String>) -> Self {
+		Self::warning(message, Range::default())
+	}
+
 	pub fn note(message: impl Into<String>, range: Range) -> Self {
 		Self::new(Severity::Note, message.into(), range)
 	}
 
-	pub fn with_file_id(mut self, file_id: FileId) -> Self {
-		self.file_id = file_id;
+	pub fn with_module_id(mut self, module_id: ModuleId) -> Self {
+		self.module_id = module_id;
 		self
 	}
 
@@ -89,24 +96,29 @@ impl Diag {
 	}
 }
 
-pub struct DiagGroup<'ckr> {
+pub struct DiagGroup {
 	pub diags: Vec<Diag>,
-	pub loader: &'ckr Loader,
 }
 
-impl<'ckr> DiagGroup<'ckr> {
-	pub fn new(loader: &'ckr Loader) -> Self {
-		Self { diags: Vec::new(), loader }
+impl DiagGroup {
+	pub fn new() -> Self {
+		Self { diags: Vec::new() }
 	}
 	pub fn add(&mut self, diag: Diag) {
 		self.diags.push(diag);
 	}
 
-	pub fn report(&self) {
+	pub fn report(&self, loader: &Loader) {
 		for diag in &self.diags {
-			let source = self.loader.get_source(diag.file_id);
+			let source = loader.get_source_unwrap(diag.module_id);
 			diag.report_err(source);
 		}
+	}
+}
+
+impl Default for DiagGroup {
+	fn default() -> Self {
+		Self::new()
 	}
 }
 

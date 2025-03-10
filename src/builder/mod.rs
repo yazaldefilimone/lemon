@@ -3,6 +3,7 @@ use std::mem;
 
 use crate::checker::types::TypeStore;
 use crate::ir::{Instr, IR};
+use crate::loader::Loader;
 use crate::source::Source;
 use crate::{ast, ir};
 use context::Context;
@@ -44,15 +45,16 @@ pub struct Builder<'br> {
 	ctx: Context,
 	ir: IR,
 	type_store: &'br TypeStore,
-	source: &'br Source,
+	loader: &'br mut Loader,
 }
 
 impl<'br> Builder<'br> {
-	pub fn new(type_store: &'br TypeStore, source: &'br Source) -> Self {
-		Self { ctx: Context::new(), ir: IR::new(), source, type_store }
+	pub fn new(type_store: &'br TypeStore, loader: &'br mut Loader) -> Self {
+		Self { ctx: Context::new(), ir: IR::new(), type_store, loader }
 	}
 
-	pub fn build(&mut self, program: &mut ast::Program) -> IR {
+	pub fn build(&mut self) -> IR {
+		let mut program = self.loader.get_ast(self.loader.entry_module).clone();
 		for stmt in program.stmts.iter_mut() {
 			self.build_stmt(stmt);
 		}

@@ -28,7 +28,13 @@ impl Linker {
 			Err(err) => throw_linker_error(format!("failed to link: {}", err)),
 		};
 		if !output.status.success() {
-			throw_linker_error(format!("{}", String::from_utf8_lossy(&output.stderr)));
+			let string = String::from_utf8_lossy(&output.stderr);
+			//
+			if string.contains("symbol(s) not found") {
+				// assume that is not found main function
+				throw_linker_error("not found main function");
+			}
+			throw_linker_error(format!("{}", string));
 		}
 		// remove object file
 		std::fs::remove_file(input).unwrap_or_else(|err| throw_linker_error(format!("{}", err)));

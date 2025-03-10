@@ -1,7 +1,3 @@
 fn main() = {
- let mut age = 10;
-
- if (age > 20) {
-  age = age + 1;
- }
+  let a = if (age > 20) { "old" };
 }

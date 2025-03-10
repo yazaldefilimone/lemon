@@ -28,6 +28,10 @@ pub enum Type {
 	// struct
 	Struct(StructType),
 
+	// module
+	//
+	Mod(ModType),
+
 	// internal
 	Unit,
 	// e.g. T
@@ -102,6 +106,12 @@ impl Type {
 	pub fn needs_free(&self) -> bool {
 		matches!(self, Type::Struct(_))
 	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ModType {
+	pub name: String,
+	pub items: Vec<TypeId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

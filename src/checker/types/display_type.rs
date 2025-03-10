@@ -1,6 +1,6 @@
 use super::{
-	BorrowType, ConstType, ExternFnType, FieldType, FnType, InferType, MethodType, NumRange, Number,
-	StructType, Type, TypeId, TypeStore,
+	BorrowType, ConstType, ExternFnType, FieldType, FnType, InferType, MethodType, ModType, NumRange,
+	Number, StructType, Type, TypeId, TypeStore,
 };
 
 impl Type {
@@ -21,6 +21,7 @@ impl Type {
 			Type::Fn(fn_type) => fn_type.display_type(text, type_store, omit),
 			Type::ExternFn(extern_fn_type) => extern_fn_type.display_type(text, type_store, omit),
 			Type::Struct(struct_type) => struct_type.display_type(text, type_store, omit),
+			Type::Mod(mod_type) => mod_type.display_type(text, type_store, omit),
 		}
 	}
 	pub fn display_ir_type(&self, text: &mut String, type_store: &TypeStore) {
@@ -214,5 +215,20 @@ impl TypeId {
 				type_value.display_type(text, type_store, omit);
 			}
 		}
+	}
+}
+
+impl ModType {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore, omit: bool) {
+		*text += "mod ";
+		*text += &self.name;
+		// *text += " { ";
+		// for (i, item) in self.items.iter().enumerate() {
+		// 	if i > 0 {
+		// 		*text += ", ";
+		// 	}
+		// 	*text += &type_store.get_display_type(*item);
+		// }
+		// *text += " }";
 	}
 }

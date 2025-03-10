@@ -1,4 +1,0 @@
-
-pub fn assert(value: bool) = {
-  if (!value) panic("assertion failed");
-}

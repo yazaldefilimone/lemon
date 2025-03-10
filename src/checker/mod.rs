@@ -2,6 +2,8 @@
 use crate::{
 	ast,
 	diag::{Diag, DiagGroup},
+	loader::Loader,
+	report::throw_error,
 };
 
 pub mod context;
@@ -43,15 +45,22 @@ type TyResult<T> = Result<T, Diag>;
 
 pub struct Checker<'ckr> {
 	ctx: &'ckr mut Context,
-	diag_group: &'ckr mut DiagGroup<'ckr>,
+	loader: &'ckr mut Loader,
+	diag_group: &'ckr mut DiagGroup,
 }
 
 impl<'ckr> Checker<'ckr> {
-	pub fn new(diag_group: &'ckr mut DiagGroup<'ckr>, ctx: &'ckr mut Context) -> Self {
-		Self { ctx, diag_group }
+	pub fn new(
+		diag_group: &'ckr mut DiagGroup,
+		ctx: &'ckr mut Context,
+		loader: &'ckr mut Loader,
+	) -> Self {
+		Self { ctx, diag_group, loader }
 	}
 
-	pub fn check_program(&mut self, ast: &mut ast::Program) -> TyResult<TypeId> {
+	pub fn check_program(&mut self) -> TyResult<TypeId> {
+		let module_id = self.loader.load_entry().unwrap_or_else(|err| throw_error(err));
+		let mut ast = self.loader.get_ast(module_id).clone();
 		for stmt in ast.stmts.iter_mut() {
 			self.check_stmt(stmt)?;
 		}

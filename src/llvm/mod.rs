@@ -54,7 +54,7 @@ mod llvm_compile_type;
 mod llvm_compile_value;
 
 pub fn create_module_from_source<'ll>(ctx: &'ll Context, source: &Source) -> Module<'ll> {
-	let module = ctx.create_module(source.file_name());
+	let module = ctx.create_module(source.name());
 	module
 }
 

@@ -1,7 +1,0 @@
-pub let max = import("max");
-pub let assert = import("assert");
-
-pub fn check_max(left: i32, right: i32, expected: i32) = {
-  let test = max(left, right);
-  assert(test == expected);
-}
