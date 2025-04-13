@@ -9,6 +9,7 @@ impl Builder<'_> {
 			ast::Expr::Binary(binary_expr) => self.build_binary_expr(binary_expr),
 			ast::Expr::Borrow(borrow_expr) => self.build_borrow_expr(borrow_expr),
 			ast::Expr::Call(call_expr) => self.build_call_expr(call_expr),
+			ast::Expr::If(if_expr) => self.build_if_expr(if_expr),
 			ast::Expr::Deref(deref_expr) => self.build_deref_expr(deref_expr),
 			ast::Expr::Ident(ident_expr) => self.build_ident_expr(ident_expr),
 			ast::Expr::Literal(literal) => self.build_literal(literal),

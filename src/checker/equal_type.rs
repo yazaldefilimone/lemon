@@ -24,12 +24,12 @@ impl Checker<'_> {
 		expected: TypeId,
 		found: TypeId,
 		range: Range,
-	) -> MessageResult<()> {
+	) -> MessageResult<TypeId> {
 		if !self.equal_type_id(expected, found) {
 			let expected = self.display_type(expected);
 			let found = self.display_type(found);
 			return Err(SyntaxErr::type_mismatch(expected, found, range));
 		}
-		Ok(())
+		Ok(expected)
 	}
 }

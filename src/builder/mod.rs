@@ -13,6 +13,7 @@ mod build_assign_expr;
 mod build_binary_expr;
 mod build_borrow_expr;
 mod build_call_expr;
+mod build_if_expr;
 
 mod build_deref_expr;
 mod build_expr;

@@ -65,13 +65,12 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 
 	// optimize::optimize(&mut ir);
 
-	if matches.get_flag("lnr") {
+	if true {
 		let disassembler = Disassembler::new(&ctx.type_store);
 		println!();
 		let mut ir_text = String::new();
 		disassembler.disassemble_program(&ir, &mut ir_text);
 		println!("{}", ir_text);
-		return;
 	}
 
 	// emit llvm

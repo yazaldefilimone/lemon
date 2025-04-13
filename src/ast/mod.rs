@@ -465,6 +465,7 @@ impl Binding {
 pub enum Expr {
 	Group(GroupExpr),
 	Fn(FnExpr),
+	If(IfExpr),
 	Assign(AssignExpr),
 	Associate(AssociateExpr),
 	Member(MemberExpr),
@@ -492,7 +493,7 @@ impl Expr {
 			Expr::Pipe(pipe) => pipe.get_range(),
 			Expr::Unary(unary) => unary.get_range(),
 			Expr::Call(call) => call.get_range(),
-			// Expr::Ret(ret_expr) => ret_expr.get_range(),
+			Expr::If(if_expr) => if_expr.get_range(),
 			Expr::Ident(ident) => ident.get_range(),
 			Expr::Assign(assign) => assign.get_range(),
 			Expr::Literal(literal) => literal.get_range(),
@@ -559,6 +560,24 @@ impl FnExpr {
 	#[inline(always)]
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.body.get_range())
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IfExpr {
+	pub cond: Box<Expr>,
+	pub then: Box<Expr>,
+	pub otherwise: Box<Expr>,
+	pub range: Range, // if range
+}
+
+impl IfExpr {
+	pub fn new(cond: Box<Expr>, then: Box<Expr>, otherwise: Box<Expr>, range: Range) -> Self {
+		Self { cond, then, otherwise, range }
+	}
+	#[inline(always)]
+	pub fn get_range(&self) -> Range {
+		self.range.merged_with(&self.otherwise.get_range())
 	}
 }
 

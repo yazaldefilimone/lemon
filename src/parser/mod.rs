@@ -418,6 +418,7 @@ impl<'p> Parser<'p> {
 			Some(Token::Char) => self.parse_char().map(ast::Expr::Literal)?,
 			Some(Token::String) => self.parse_string().map(ast::Expr::Literal)?,
 			Some(Token::Fn) => self.parse_fn_expr().map(ast::Expr::Fn)?,
+			Some(Token::If) => self.parse_if_expr().map(ast::Expr::If)?,
 			Some(Token::Import) => self.parse_import_expr().map(ast::Expr::Import)?,
 			Some(Token::Decimal) | Some(Token::Hex) | Some(Token::Bin) => {
 				self.parse_numb().map(ast::Expr::Literal)?
@@ -633,6 +634,19 @@ impl<'p> Parser<'p> {
 		Ok(ast::FnExpr { params, body, range, ret_type })
 	}
 
+	// if (cond) { lexpr } else { rexpr }
+	fn parse_if_expr(&mut self) -> MessageResult<ast::IfExpr> {
+		let range = self.expect(Token::If)?;
+		self.expect(Token::LParen)?;
+		let cond = self.parse_expr(MIN_PDE)?;
+		self.expect_many(vec![Token::RParen, Token::LBrace])?;
+		let then = self.parse_expr(MIN_PDE)?;
+		self.expect_many(vec![Token::RBrace, Token::Else, Token::LBrace])?;
+		let otherwise = self.parse_expr(MIN_PDE)?;
+		self.expect(Token::RBrace)?;
+		Ok(ast::IfExpr::new(Box::new(cond), Box::new(then), Box::new(otherwise), range))
+	}
+
 	fn parse_call_expr(&mut self, callee: ast::Expr) -> MessageResult<ast::Expr> {
 		let mut range = self.expect(Token::LParen)?; // consume '('
 		let mut args = Vec::new();
@@ -779,6 +793,17 @@ impl<'p> Parser<'p> {
 		} else {
 			Ok(None)
 		}
+	}
+
+	fn expect_many(&mut self, tokens: Vec<Token>) -> MessageResult<Range> {
+		Ok(if tokens.is_empty() {
+			Range::default()
+		} else {
+			tokens
+				.iter()
+				.skip(1)
+				.try_fold(self.expect(tokens[0])?, |acc, &t| Ok(acc.merged_with(&self.expect(t)?)))?
+		})
 	}
 
 	fn expect(&mut self, token: Token) -> MessageResult<Range> {

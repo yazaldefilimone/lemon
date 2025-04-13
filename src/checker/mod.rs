@@ -30,6 +30,7 @@ mod check_extern_fn_stmt;
 mod check_fn_stmt;
 mod check_for_stmt;
 mod check_ident_expr;
+mod check_if_expr;
 mod check_if_stmt;
 mod check_impl_stmt;
 mod check_import_expr;

@@ -12,6 +12,7 @@ impl Checker<'_> {
 			ast::Expr::Assign(assign_expr) => self.check_assign_expr(assign_expr),
 			ast::Expr::Ident(ident_expr) => self.check_ident_expr(ident_expr),
 			ast::Expr::Call(call_expr) => self.check_call_expr(call_expr),
+			ast::Expr::If(if_expr) => self.check_if_expr(if_expr),
 			ast::Expr::StructInit(stuct_init_expr) => self.check_struct_init_expr(stuct_init_expr),
 			ast::Expr::Import(import_expr) => self.check_import_expr(import_expr),
 			ast::Expr::Associate(associate_expr) => self.check_associate_expr(associate_expr),
