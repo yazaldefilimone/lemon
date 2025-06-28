@@ -1,3 +1,0 @@
-fn main() = {
-  let a = if (age > 20) { "old" };
-}
