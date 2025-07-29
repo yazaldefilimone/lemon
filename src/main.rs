@@ -1,48 +1,50 @@
-use crate::{lexer::Lexer, messages::Messages};
 mod ast;
+mod checker;
+mod cli;
 mod color;
+mod comptime;
+mod hir;
 mod lexer;
-mod loader;
+mod llvm;
+mod macros;
 mod messages;
+mod mir;
 mod parser;
+mod resolver;
+mod span;
+mod token;
+mod token_reader;
 
-#[macro_export]
-macro_rules! usage_error {
-	($($arg:tt)*) => {{
-		eprint!("{}Usage error:{} ", crate::color::BOLD_RED, crate::color::RESET);
-		eprintln!($( $arg )*);
-		std::process::exit(-1);
-	}}
+fn check() {
+	println!("check");
+}
+
+fn emit(stages: &[cli::EmitStage]) {
+	println!("emit: {:?}", stages);
+}
+
+fn print(item: cli::PrintItem) {
+	println!("print: {:?}", item);
+}
+
+fn build() {
+	println!("build");
 }
 
 fn main() {
-	let source = r#"
-	extern fn printf(fmt: str, ...): i32 = {}
+	let arguments = cli::parse_args();
+	let file = arguments.input.to_path_buf();
+	let output = arguments.output.as_ref().map(|p| p.to_path_buf());
 
-fn println(value: i32) = {
-		printf("%d\n", value)
-}
+	// let mut resolver = resolver::Resolver::new(file);
+	// resolver.resolve();
 
-fn test(x: i32): i32 = {
-  if (x > 5) return x
-  let n = x + 1
-  return n
-}
+	// let ast = resolver.ast();
 
-fn main() = {
-  let x = test(1)
-  println(x)
-}
-"#;
-
-	let mut lex = Lexer::new(0, source);
-	let paths = &["main.ln".to_string()];
-	let mut messages = Messages::new(paths);
-	let mut token_stream = lex.tokenize(&mut messages);
-
-	println!("error: {:?}", messages.messages);
-	while let Ok(token) = token_stream.advance(&mut messages) {
-		println!("{}", token);
+	match arguments.mode() {
+		cli::Mode::Emit(stages) => emit(&stages),
+		cli::Mode::Print(item) => print(item),
+		cli::Mode::Build => build(),
+		cli::Mode::Check => check(),
 	}
-	println!("error: {:?}", messages.messages);
 }
