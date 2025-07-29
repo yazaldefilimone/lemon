@@ -26,3 +26,5 @@ Cargo.lock
 /target
 # ignore playground folder
 /tests/playground
+
+_src
