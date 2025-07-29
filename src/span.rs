@@ -1,0 +1,79 @@
+use std::{
+	fmt::{Display, Formatter, Result as FmtResult},
+	ops::{Add, AddAssign},
+};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Span {
+	pub start: usize,
+	pub end: usize,
+	pub file: u32,
+	pub line: u32,
+}
+
+impl Span {
+	#[inline]
+	pub fn new(start: usize, end: usize, file: u32, line: u32) -> Self {
+		Self { start, end, file, line }
+	}
+
+	#[inline]
+	pub fn unusable() -> Self {
+		Self { start: usize::MAX, end: usize::MAX, file: u32::MAX, line: u32::MAX }
+	}
+}
+
+impl Display for Span {
+	fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+		write!(f, "{}..{}", self.start, self.end)
+	}
+}
+
+impl Add for Span {
+	type Output = Self;
+
+	fn add(self, other: Self) -> Self {
+		debug_assert_eq!(self.file, other.file);
+		let start = self.start.min(other.start);
+		let end = self.end.max(other.end);
+		let line = self.line.min(other.line);
+		Self::new(start, end, self.file, line)
+	}
+}
+
+impl AddAssign for Span {
+	fn add_assign(&mut self, rhs: Self) {
+		*self = *self + rhs;
+	}
+}
+
+// impl Span {
+// 	pub fn unusable() -> Span {
+// 		Span { start: usize::MAX, end: usize::MAX, file_index: u32::MAX, line_index: u32::MAX }
+// 	}
+
+// 	pub fn debug_location(self, parsed_files: &[tree::File]) -> DebugLocation {
+// 		let file = &parsed_files[self.file_index as usize];
+// 		let line_start = file.line_starts[self.line_index as usize];
+// 		let offset_in_line = self.start - line_start + 1;
+
+// 		DebugLocation {
+// 			file_index: self.file_index,
+// 			line: self.line_index + 1,
+// 			offset_in_line: offset_in_line as u32,
+// 		}
+// 	}
+// }
+
+// #[derive(Debug, Clone, Copy)]
+// pub struct DebugLocation {
+// 	pub file_index: u32,
+// 	pub line: u32,
+// 	pub offset_in_line: u32,
+// }
+
+// impl DebugLocation {
+// 	pub fn unusable() -> DebugLocation {
+// 		DebugLocation { file_index: u32::MAX, line: u32::MAX, offset_in_line: u32::MAX }
+// 	}
+// }
