@@ -1,5 +1,5 @@
 {
   "file_types": {
-    "Rust": ["ln", "lnr"]
+    "Rust": ["ln"]
   }
 }
