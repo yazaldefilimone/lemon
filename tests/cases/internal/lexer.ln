@@ -1,0 +1,15 @@
+fn main() = {
+	let a = 1;
+	let b = 2;
+	let c = 3;
+	println(a + b + c);
+}
+
+fn println(x) = {
+	print(x);
+	print("\n");
+}
+
+fn print(x) = {
+	io.print(x);
+}
