@@ -32,6 +32,18 @@ impl Message {
 		self.notes.push(note);
 		self
 	}
+
+	pub fn with_span_if_some(mut self, span: Option<Span>) -> Message {
+		self.span = self.span.or(span);
+		self
+	}
+
+	pub fn with_note_if_some(mut self, span: Option<Span>, text: &str) -> Message {
+		if let Some(note) = Note::maybe_new(text, span) {
+			self.notes.push(note);
+		}
+		self
+	}
 }
 
 #[derive(Debug)]
@@ -43,6 +55,9 @@ pub struct Note {
 impl Note {
 	pub fn new(span: Span, text: impl Into<String>) -> Self {
 		Self { span, text: text.into() }
+	}
+	pub fn maybe_new(text: &str, span: Option<Span>) -> Option<Note> {
+		Some(Note { text: text.to_owned(), span: span? })
 	}
 }
 
