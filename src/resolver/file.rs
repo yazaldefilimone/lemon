@@ -8,6 +8,12 @@ pub struct SourceFile {
 	pub index: u32,
 }
 
+impl SourceFile {
+	pub fn new(source: String, path: PathBuf, index: u32) -> Self {
+		Self { source, path, index }
+	}
+}
+
 impl std::fmt::Debug for SourceFile {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.debug_struct("SourceFile")
