@@ -24,7 +24,7 @@ rust_decimal = "1.37.1"
 
 
 [dev-dependencies]
-insta = "1.41.1"
+insta = { version = "1.41.1", features = ["glob", "yaml"] }
 stdext = "0.3.3"
 walkdir = "2.5.0"
 
