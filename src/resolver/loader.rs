@@ -1,7 +1,6 @@
-use crate::{
-	resolver::file::{Result, SourceFile},
-	usage_error,
-};
+use crate::resolver::file::{Result, SourceFile};
+use crate::usage_error;
+
 use std::{fs::File, io::Read, path::PathBuf};
 
 pub fn load_single_file(path: PathBuf, files: &mut Vec<SourceFile>) -> Result<String> {
@@ -16,10 +15,10 @@ pub fn load_single_file(path: PathBuf, files: &mut Vec<SourceFile>) -> Result<St
 	};
 
 	let name = stem.to_string_lossy();
-	let name_without_ext = name.strip_suffix(".fae").unwrap_or(&name).to_owned();
+	let name_without_ext = name.strip_suffix(".ln").unwrap_or(&name).to_owned();
 
 	let index = files.len() as u32;
-	files.push(SourceFile { source, path, index });
+	files.push(SourceFile::new(source, path, index));
 
 	Ok(name_without_ext)
 }
