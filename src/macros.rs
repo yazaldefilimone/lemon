@@ -1,22 +1,22 @@
 #[macro_export]
 macro_rules! error {
-	($msg:expr) => {
-		$crate::messages::Message::error($msg)
-	};
+	($($arg:tt)*) => {
+		$crate::messages::Message::error(format!( $($arg)* ))
+	}
 }
 
 #[macro_export]
 macro_rules! warning {
-	($msg:expr) => {
-		$crate::messages::Message::warning($msg)
-	};
+	($($arg:tt)*) => {
+		$crate::messages::Message::warning(format!( $($arg)* ))
+	}
 }
 
 #[macro_export]
 macro_rules! note {
-	($span:expr, $msg:expr) => {
-		$crate::messages::Note::new($span, $msg)
-	};
+	($span:expr, $($arg:tt)*) => {
+		$crate::messages::Note::new($span, format!( $($arg)* ))
+	}
 }
 
 #[macro_export]
