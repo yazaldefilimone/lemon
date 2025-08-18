@@ -1,9 +1,8 @@
 use std::borrow::Cow;
 
 use crate::{
-	ast::{self, Attributes, BinaryOperator, FormatStringLiteral, Node},
+	ast::{Attributes, BinaryOperator, Node},
 	error,
-	lexer::Lexer,
 	messages::Messages,
 	note,
 	span::Span,
@@ -116,7 +115,7 @@ pub fn consume_error_syntax<'a>(reader: &mut TokenReader<'a>, messages: &mut Mes
 	}
 }
 
-pub fn token_to_operator(token: &Token) -> Option<Node<BinaryOperator>> {
+pub fn token_to_operator(token: Token) -> Option<Node<BinaryOperator>> {
 	let operator = match token.kind {
 		TokenKind::Equal => BinaryOperator::Assign,
 
