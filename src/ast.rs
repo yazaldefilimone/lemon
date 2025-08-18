@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::borrow::Cow;
 
 use crate::{resolver::file::SourceFile, span::Span, token::Token};
@@ -36,7 +37,12 @@ pub struct Block<'a> {
 
 #[derive(Debug)]
 pub enum Statement<'a> {
-	Declaration(Node<Declaration<'a>>),
+	Struct(Node<Struct<'a>>),
+	Enum(Node<Enum<'a>>),
+	Union(Node<Union<'a>>),
+	Function(Node<Function<'a>>),
+	Constant(Node<Constant<'a>>),
+	Let(Node<Let<'a>>),
 	Command(Node<Command<'a>>),
 	Expression(Node<Expression<'a>>),
 	Block(Node<Block<'a>>),
@@ -45,16 +51,7 @@ pub enum Statement<'a> {
 	While(Node<While<'a>>),
 	For(Node<For<'a>>),
 	WhenElseChain(Node<WhenElseChain<'a>>),
-}
-
-#[derive(Debug)]
-pub enum Declaration<'a> {
-	Struct(Struct<'a>),
-	Enum(Enum<'a>),
-	Union(Union<'a>),
-	Function(Function<'a>),
-	Constant(Constant<'a>),
-	Let(Let<'a>),
+	Return(Node<Expression<'a>>),
 }
 
 #[derive(Debug)]
@@ -188,12 +185,33 @@ pub struct Function<'a> {
 	pub name: Node<&'a str>,
 	pub generics: Vec<GenericName<'a>>,
 	pub parameters: Vec<Parameter<'a>>,
-	pub return_type: Option<Type<'a>>,
-	pub body: Option<Block<'a>>,
+	pub return_type: Option<Node<Type<'a>>>,
+	pub body: Option<Node<Block<'a>>>,
 	pub extern_attribute: Option<&'a Node<ExternAttribute<'a>>>,
 	pub pub_attribute: Option<&'a Node<PubAttribute<'a>>>,
 	pub method_kind: Option<MethodKind>,
 	pub lang_attribute: Option<String>,
+}
+
+impl<'a> Function<'a> {
+	pub fn new(
+		name: Node<&'a str>,
+		parameters: Vec<Parameter<'a>>,
+		return_type: Option<Node<Type<'a>>>,
+		body: Option<Node<Block<'a>>>,
+	) -> Self {
+		Self {
+			name,
+			parameters,
+			generics: Vec::new(),
+			return_type,
+			body,
+			extern_attribute: None,
+			pub_attribute: None,
+			method_kind: None,
+			lang_attribute: None,
+		}
+	}
 }
 
 #[derive(Debug)]
@@ -307,8 +325,7 @@ pub struct TransparentVariant<'a> {
 #[derive(Debug)]
 pub struct Parameter<'a> {
 	pub name: Node<&'a str>,
-	pub label: Option<Node<&'a str>>,
-	pub ty: Type<'a>,
+	pub param_type: Node<Type<'a>>,
 	pub mutable: bool,
 }
 
@@ -365,8 +382,14 @@ pub struct SliceLiteral<'a> {
 
 #[derive(Debug)]
 pub struct StructLiteral<'a> {
-	pub base: Box<Expression<'a>>,
-	pub initializer: StructInitializer<'a>,
+	pub base: Box<Node<Expression<'a>>>,
+	pub initializer: Node<StructInitializer<'a>>,
+}
+
+impl<'a> StructLiteral<'a> {
+	pub fn new(base: Node<Expression<'a>>, initializer: Node<StructInitializer<'a>>) -> Self {
+		Self { base: Box::new(base), initializer }
+	}
 }
 
 #[derive(Debug)]
@@ -382,16 +405,26 @@ pub struct FieldInitializer<'a> {
 
 #[derive(Debug)]
 pub struct Call<'a> {
-	pub base: Option<Box<Expression<'a>>>,
+	pub base: Option<Box<Node<Expression<'a>>>>,
 	pub name: Node<&'a str>,
 	pub type_arguments: Vec<Type<'a>>,
 	pub arguments: Vec<Argument<'a>>,
 }
 
+impl<'a> Call<'a> {
+	pub fn new(
+		base: Option<Node<Expression<'a>>>,
+		name: Node<&'a str>,
+		type_arguments: Vec<Type<'a>>,
+		arguments: Vec<Argument<'a>>,
+	) -> Self {
+		Self { base: base.map(Box::new), name, type_arguments, arguments }
+	}
+}
+
 #[derive(Debug)]
 pub struct Argument<'a> {
-	pub label: Option<Node<&'a str>>,
-	pub expression: Expression<'a>,
+	pub expression: Node<Expression<'a>>,
 }
 
 #[derive(Debug)]
@@ -402,15 +435,31 @@ pub struct Read<'a> {
 
 #[derive(Debug)]
 pub struct DotAccess<'a> {
-	pub base: Box<Expression<'a>>,
+	pub base: Box<Node<Expression<'a>>>,
 	pub name: Node<&'a str>,
 	pub type_arguments: Vec<Type<'a>>,
 }
 
+impl<'a> DotAccess<'a> {
+	pub fn new(
+		base: Node<Expression<'a>>,
+		name: Node<&'a str>,
+		type_arguments: Vec<Type<'a>>,
+	) -> Self {
+		Self { base: Box::new(base), name, type_arguments }
+	}
+}
+
 #[derive(Debug)]
 pub struct UnaryOperation<'a> {
-	pub operator: Box<UnaryOperator<'a>>,
-	pub expression: Box<Expression<'a>>,
+	pub operator: Box<Node<UnaryOperator<'a>>>,
+	pub expression: Box<Node<Expression<'a>>>,
+}
+
+impl<'a> UnaryOperation<'a> {
+	pub fn new(operator: Node<UnaryOperator<'a>>, expression: Node<Expression<'a>>) -> Self {
+		Self { operator: Box::new(operator), expression: Box::new(expression) }
+	}
 }
 
 #[derive(Debug)]
@@ -421,8 +470,8 @@ pub enum UnaryOperator<'a> {
 	AddressOf,
 	AddressOfMut,
 	Dereference,
-	Cast(Type<'a>),
-	Index(Expression<'a>),
+	Cast { parsed_type: Node<Type<'a>> },
+	Index { expression: Node<Expression<'a>> },
 }
 
 #[derive(Debug)]
@@ -599,10 +648,8 @@ impl<'a> CheckIs<'a> {
 }
 
 pub struct AllowedAttributes {
-	pub generic_attribute: bool,
 	pub extern_attribute: bool,
 	pub pub_attribute: bool,
-	// pub method_attribute: bool,
 }
 
 #[derive(Debug)]
@@ -615,11 +662,7 @@ impl<'a> Attributes<'a> {
 	pub const FIELD_COUNT: usize = 2;
 
 	pub fn blank() -> Self {
-		Attributes {
-			extern_attribute: None,
-			pub_attribute: None,
-			// method_attribute: None,
-		}
+		Attributes { extern_attribute: None, pub_attribute: None }
 	}
 
 	pub fn attribute_spans<'b>(&self, buffer: &'b mut [Span]) -> &'b [Span] {
