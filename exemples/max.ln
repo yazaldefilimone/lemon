@@ -1,4 +1,4 @@
-fn max(x: &mut u32, y: &u32): &mut u32 = {
-	if (*y > *x) retun x;
-  return  y
+
+fn main() = {
+  println("Hello, Lemon!")
 }
