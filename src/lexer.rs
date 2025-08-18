@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::{
 	error,
 	messages::Messages,
@@ -18,7 +19,7 @@ pub struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
 	pub fn new(file: u32, source: &'a str) -> Self {
-		Self { file, source, chars_bytes: source.as_bytes(), position: 0, line: 0 }
+		Self { file, source, chars_bytes: source.as_bytes(), position: 0, line: 1 }
 	}
 
 	pub fn new_substring(
