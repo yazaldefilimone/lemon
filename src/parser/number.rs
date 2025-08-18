@@ -60,7 +60,7 @@ fn parse_binary_literal<'a>(
 ) -> Result<Node<Expression<'a>>> {
 	let mut value = Decimal::ZERO;
 
-	for (i, byte) in text.bytes().enumerate() {
+	for (_, byte) in text.bytes().enumerate() {
 		let bit = match byte {
 			b'0' => Decimal::ZERO,
 			b'1' => Decimal::ONE,
