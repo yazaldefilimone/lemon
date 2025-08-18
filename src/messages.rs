@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{resolver::file::SourceFile, span::Span};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
