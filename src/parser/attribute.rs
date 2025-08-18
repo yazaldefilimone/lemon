@@ -5,7 +5,7 @@ use crate::{
 	messages::Messages,
 	note,
 	span::Span,
-	token::{Token, TokenKind},
+	token::TokenKind,
 	token_reader::TokenReader,
 };
 
@@ -13,27 +13,14 @@ pub fn parse_attributes<'a>(
 	reader: &mut TokenReader<'a>,
 	messages: &mut Messages,
 ) -> Result<ast::Attributes<'a>> {
-	let mut attributes = ast::Attributes::blank();
+	let attributes = ast::Attributes::blank();
 
 	while let Ok(peeked) = reader.peek() {
 		if peeked.kind == TokenKind::CloseBrace {
 			break;
 		}
-		match peeked {
-			Token { kind: TokenKind::Word, text: "pub", .. } => {
-				check_duplicate_attribute(messages, attributes.pub_attribute, "pub", peeked.span)?;
-				let attribute = parse_pub_attribute(reader, messages)?;
-				attributes.pub_attribute = Some(attribute);
-			}
-			Token { kind: TokenKind::Word, text: "extern", .. } => {
-				check_duplicate_attribute(messages, attributes.extern_attribute, "extern", peeked.span)?;
-				let attribute = parse_extern_attribute(reader, messages)?;
-				attributes.extern_attribute = Some(attribute);
-			}
-			_ => {
-				break;
-			}
-		}
+		// todo: implement this
+		break;
 	}
 	Ok(attributes)
 }
