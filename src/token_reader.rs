@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::error;
 use crate::messages::Messages;
 use crate::token::{Token, TokenKind};
@@ -15,13 +17,13 @@ impl<'a> TokenReader<'a> {
 		Self { position: 0, tokens, source }
 	}
 
-	pub fn next(&mut self, messages: &mut Messages) -> Result<&Token<'a>> {
+	pub fn next(&mut self, messages: &mut Messages) -> Result<Token<'a>> {
 		if self.position >= self.tokens.len() {
 			let message = error!("unexpected end of file");
 			messages.message(message);
 			return Err(());
 		}
-		let token = &self.tokens[self.position];
+		let token = self.tokens[self.position].clone();
 		self.position += 1;
 		Ok(token)
 	}
@@ -38,15 +40,15 @@ impl<'a> TokenReader<'a> {
 		return Err(());
 	}
 
-	pub fn peek(&self) -> Result<&Token<'a>> {
+	pub fn peek(&self) -> Result<Token<'a>> {
 		if self.position >= self.tokens.len() {
 			return Err(());
 		}
-		Ok(&self.tokens[self.position])
+		Ok(self.tokens[self.position])
 	}
 
-	pub fn peek_kind(&self) -> Result<&TokenKind> {
-		self.peek().map(|token| &token.kind)
+	pub fn peek_kind(&self) -> Result<TokenKind> {
+		self.peek().map(|token| token.kind)
 	}
 
 	pub fn peek_ahead(&self) -> Result<&Token<'a>> {
@@ -75,6 +77,16 @@ impl<'a> TokenReader<'a> {
 		Ok(token)
 	}
 
+	#[inline]
+	pub fn expect_peek(&mut self, kind: TokenKind, messages: &mut Messages) -> Result<Token<'a>> {
+		let token = self.peek()?;
+		if token.kind != kind {
+			let message = error!("expected '{}', found '{}'", kind, token.kind);
+			messages.message(message);
+			return Err(());
+		}
+		Ok(token)
+	}
 	pub fn expect_word(&mut self, word: &str, messages: &mut Messages) -> Result<Token<'a>> {
 		let token = self.expect(TokenKind::Word, messages)?;
 		if token.text != word {
@@ -86,7 +98,7 @@ impl<'a> TokenReader<'a> {
 	}
 
 	pub fn read_if_word(&mut self, word: &str, messages: &mut Messages) -> Result<Token<'a>> {
-		match self.peek().cloned() {
+		match self.peek() {
 			Ok(Token { kind: TokenKind::Word, text, .. }) if text == word => {
 				self.next(messages)?;
 				Ok(Token { kind: TokenKind::Word, text, span: self.peek()?.span })
@@ -95,8 +107,15 @@ impl<'a> TokenReader<'a> {
 		}
 	}
 
+	pub fn read_if(&mut self, kind: TokenKind, messages: &mut Messages) -> Result<Token<'a>> {
+		if self.peek_kind() == Ok(kind) {
+			return Ok(self.next(messages)?);
+		}
+		Err(())
+	}
+
 	pub fn read_semicolon(&mut self, messages: &mut Messages) -> Result<Token<'a>> {
-		let token = self.peek()?.clone();
+		let token = self.peek()?;
 		match token {
 			Token { kind: TokenKind::Semicolon, .. } => {
 				self.next(messages)?;
