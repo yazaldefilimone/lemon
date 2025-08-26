@@ -29,7 +29,6 @@ fn emit(stages: &[cli::EmitStage], path: &std::path::Path) {
 		std::process::exit(1);
 	}
 	let file = files.get(index as usize).unwrap();
-
 	match stages {
 		[cli::EmitStage::Ast] => {
 			let mut messages = Messages::new(file);
@@ -39,9 +38,31 @@ fn emit(stages: &[cli::EmitStage], path: &std::path::Path) {
 			messages.print("parser");
 			println!("{:#?}", file);
 		}
-		_ => {
-			todo!()
+		[cli::EmitStage::Mir] => {
+			let mut messages = Messages::new(file);
+			let mut lexer = lexer::Lexer::new(index, &file.source);
+			let mut token_reader = lexer.reader(&mut messages);
+			let file = parse_file(&file, &mut token_reader, &mut messages);
+			messages.print("parser");
+			println!("{:?}", file);
 		}
+		[cli::EmitStage::LlvmIr] => {
+			let mut messages = Messages::new(file);
+			let mut lexer = lexer::Lexer::new(index, &file.source);
+			let mut token_reader = lexer.reader(&mut messages);
+			let file = parse_file(&file, &mut token_reader, &mut messages);
+			messages.print("parser");
+			println!("{:?}", file);
+		}
+		[cli::EmitStage::Hir] => {
+			let mut messages = Messages::new(file);
+			let mut lexer = lexer::Lexer::new(index, &file.source);
+			let mut token_reader = lexer.reader(&mut messages);
+			let file = parse_file(&file, &mut token_reader, &mut messages);
+			messages.print("parser");
+			println!("{:?}", file);
+		}
+		_ => {}
 	}
 }
 
