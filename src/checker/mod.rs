@@ -6,10 +6,13 @@ use crate::{
 	range::Range,
 };
 
+mod bidirectional;
 mod borrow;
 mod comptime;
 pub mod context;
+mod error_suggestions;
 pub mod events;
+mod generics;
 pub mod types;
 use context::Context;
 use diags::SyntaxErr;

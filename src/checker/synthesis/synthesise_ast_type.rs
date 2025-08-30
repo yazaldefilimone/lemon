@@ -19,7 +19,7 @@ pub fn synthesise_ast_type(ast_type: &ast::AstType, ctx: &mut Context) -> Messag
 		AstType::Fn(fn_type) => synthesise_fn_type(fn_type, ctx),
 		AstType::Borrow(borrow) => synthesise_borrow_type(borrow, ctx),
 		AstType::Ident(ident) => synthesise_ident_type(ident, ctx),
-		_ => todo!("code {:?}", ast_type),
+		AstType::Void(_) => Ok(TypeId::VOID),
 	}
 }
 
@@ -39,7 +39,7 @@ fn synthesise_ident_type(ident: &ast::IdentType, ctx: &mut Context) -> MessageRe
 		return Ok(*type_id);
 	}
 
-	todo!("not found type '{}'", ident.lexeme())
+	Err(error_type!("unknown type '{}' at {:?}", ident.lexeme(), ident.get_range()))
 }
 
 fn synthesise_number_type(number: &ast::NumberType, ctx: &mut Context) -> MessageResult<TypeId> {

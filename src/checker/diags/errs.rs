@@ -311,4 +311,19 @@ impl<'tce> SyntaxErr<'tce> {
 	pub fn cannot_return_local_reference(range: Range) -> Message {
 		error_type!("cannot return a local reference").range(range)
 	}
+
+	#[inline]
+	pub fn missing_return(expected: String, range: Range) -> Message {
+		error_type!("missing return statement, expected type '{}'", expected).range(range)
+	}
+
+	#[inline]
+	pub fn pattern_type_mismatch(expected: String, range: Range) -> Message {
+		error_type!("pattern does not match expected type '{}'", expected).range(range)
+	}
+
+	#[inline]
+	pub fn not_generic_type(type_name: String, range: Range) -> Message {
+		error_type!("'{}' is not a generic type", type_name).range(range)
+	}
 }
