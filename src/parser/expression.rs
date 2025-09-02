@@ -49,27 +49,6 @@ fn parse_precedence<'a>(
 	Ok(left)
 }
 
-fn parse_postfix_chain<'a>(
-	reader: &mut TokenReader<'a>,
-	messages: &mut Messages,
-	mut expression: Node<ast::Expression<'a>>,
-	allow_struct_literal: bool,
-) -> Result<Node<ast::Expression<'a>>> {
-	loop {
-		match reader.peek_kind() {
-			Ok(TokenKind::Dot) => {
-				reader.next(messages)?;
-				expression = parse_following_dot(reader, messages, expression, allow_struct_literal)?;
-			}
-			Ok(TokenKind::OpenBracket) => {
-				expression = parse_bracket_index(reader, messages, expression)?;
-			}
-			_ => break,
-		}
-	}
-	Ok(expression)
-}
-
 fn parse_primary<'a>(
 	reader: &mut TokenReader<'a>,
 	messages: &mut Messages,
@@ -152,6 +131,27 @@ fn parse_word_or_path_expression<'a>(
 		}
 		_ => parse_path_expression(reader, messages, None, allow_struct_literal),
 	}
+}
+
+fn parse_postfix_chain<'a>(
+	reader: &mut TokenReader<'a>,
+	messages: &mut Messages,
+	mut expression: Node<ast::Expression<'a>>,
+	allow_struct_literal: bool,
+) -> Result<Node<ast::Expression<'a>>> {
+	loop {
+		match reader.peek_kind() {
+			Ok(TokenKind::Dot) => {
+				reader.next(messages)?;
+				expression = parse_following_dot(reader, messages, expression, allow_struct_literal)?;
+			}
+			Ok(TokenKind::OpenBracket) => {
+				expression = parse_bracket_index(reader, messages, expression)?;
+			}
+			_ => break,
+		}
+	}
+	Ok(expression)
 }
 
 fn parse_bracket_index<'a>(

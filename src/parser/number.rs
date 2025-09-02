@@ -72,7 +72,7 @@ fn parse_binary_literal<'a>(
 		};
 
 		value = match value.checked_mul(Decimal::TWO) {
-			Some(v) => v,
+			Some(value) => value,
 			None => {
 				let message = error!("overflow while parsing binary literal").with_span(span);
 				messages.message(message);
