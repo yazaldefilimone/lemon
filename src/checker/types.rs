@@ -6,6 +6,12 @@ pub struct TypeId {
 	entry: u32,
 }
 
+impl TypeId {
+	pub fn index(self) -> usize {
+		self.entry as usize
+	}
+}
+
 pub struct AsPointed {
 	pub type_id: TypeId,
 	pub mutable: bool,

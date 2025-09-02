@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use crate::{resolver::file::SourceFile, span::Span, token::Token};
 use rust_decimal::Decimal;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, Hash)]
 pub struct Node<T> {
 	pub item: T,
 	pub span: Span,

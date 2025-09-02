@@ -68,3 +68,9 @@ struct Function<'a> {
 	return_type: TypeId,
 	parameters: Vec<TypeId>,
 }
+
+impl<'a> TypeStore<'a> {
+	pub fn direct_match(&self, type_id: TypeId, other: TypeId) -> bool {
+		todo!()
+	}
+}
