@@ -2,73 +2,175 @@ use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
-#[command(name = "lemonc", version, about = "lemon language compiler")]
+#[command(name = "lemonc", version, about = "the lemon language compiler")]
 pub struct Cli {
-	#[arg(value_name = "input", help = "path to the input source file")]
-	pub input: PathBuf,
+	/// Path to the input source file.
+	#[arg(value_name = "INPUT_FILE")]
+	pub input_file: PathBuf,
 
-	#[arg(short = 'o', long, value_name = "output", help = "optional output file path")]
-	pub output: Option<PathBuf>,
+	/// Optional output file path.
+	#[arg(short = 'o', long, value_name = "OUTPUT_FILE")]
+	pub output_file: Option<PathBuf>,
 
-	#[arg(short = 'r', long, help = "enable release mode optimizations")]
-	pub release: bool,
+	/// Enable release mode optimizations.
+	#[arg(short = 'r', long)]
+	pub release_mode: bool,
 
-	#[arg(long, help = "only check the code, do not build")]
-	pub check: bool,
+	/// only check the code, do not build.
+	#[arg(long)]
+	pub check_only: bool,
 
-	#[arg(
-		long,
-		value_enum,
-		value_delimiter = ',',
-		value_name = "stage",
-		help = "emit intermediate representations (ast, hir, mir, llvmir)"
-	)]
-	pub emit: Vec<EmitStage>,
+	/// emit intermediate representations (AST, HIR, MIR, LLVMIR).
+	#[arg(long, value_enum, value_delimiter = ',', value_name = "STAGES")]
+	pub emit_stages: Vec<EmitStage>,
 
-	#[arg(
-		long,
-		value_enum,
-		value_name = "item",
-		help = "print internal compiler data (tokens, span, types)"
-	)]
-	pub print: Option<PrintItem>,
+	/// print internal compiler data (tokens, spans, types).
+	#[arg(long, value_enum, value_name = "ITEM")]
+	pub print_item: Option<PrintItem>,
 }
 
+/// intermediate representation stages that can be emitted.
 #[derive(Debug, Clone, ValueEnum)]
 pub enum EmitStage {
-	Ast,
-	Hir,
-	Mir,
-	LlvmIr,
+	AST,
+	HIR,
+	MIR,
+	LLVMIR,
 }
 
+/// Internal compiler data that can be printed.
 #[derive(Debug, Clone, ValueEnum)]
 pub enum PrintItem {
 	Tokens,
-	Span,
+	Spans,
 	Types,
 }
+
+#[derive(Debug)]
 pub enum Mode {
-	Check,
-	Emit(Vec<EmitStage>),
-	Print(PrintItem),
+	CheckOnly,
+	EmitStages(Vec<EmitStage>),
+	Inspect(PrintItem),
 	Build,
+}
+
+#[derive(Debug)]
+pub enum Backend {
+	LLVM,
+	Cranelift,
+}
+
+impl Default for Backend {
+	fn default() -> Self {
+		Backend::LLVM
+	}
+}
+
+#[derive(Debug)]
+pub enum OptimizerLevel {
+	None,
+	Speed,
+	Size,
+	Max,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum Linker {
+	Lld,  // best for macOS(cross-platform)
+	Mold, // best for linux/windows
+	Msvc, // best for windows
+}
+
+impl Default for Linker {
+	fn default() -> Self {
+		Linker::Lld
+	}
+}
+
+impl Default for OptimizerLevel {
+	fn default() -> Self {
+		OptimizerLevel::None
+	}
+}
+
+#[derive(Debug)]
+pub struct CompilerOptions {
+	pub release_mode: bool,
+	/// Path to the input source file.
+	pub input_file: PathBuf,
+
+	/// Path to the output file (binary, object, etc.).
+	pub output_file: Option<PathBuf>,
+
+	/// Optimization level (0–3, s, z).
+	pub optimizer_level: OptimizerLevel,
+
+	/// high-level compiler mode (check, emit, inspect, build).
+	pub mode: Mode,
+
+	/// selected code generation backend.
+	pub backend: Backend,
+
+	/// whether to link against the standard library.
+	pub std_enabled: bool,
+
+	/// whether to use colored diagnostics.
+	pub color_messages: bool,
+
+	pub verbose: bool,
+
+	pub target: Option<String>, // ex: "x86_64-unknown-linux-gnu"
+
+	pub linker: Linker,
+
+	// debug options
+	pub check_llvm_ir: bool,
+	// pub debug_ast: bool,
+	// pub debug_hir: bool,
+	// pub debug_mir: bool,
+	// pub debug_resolver: bool,
+	pub debug_type: bool,
+}
+
+impl Default for CompilerOptions {
+	fn default() -> Self {
+		CompilerOptions {
+			release_mode: false,
+			input_file: PathBuf::new(),
+			output_file: None,
+			optimizer_level: OptimizerLevel::default(),
+			mode: Mode::Build,
+			backend: Backend::default(),
+			std_enabled: true,
+			color_messages: true,
+			verbose: false,
+			target: None,
+			check_llvm_ir: false,
+			linker: Linker::default(),
+			// debug_ast: false,
+			// debug_hir: false,
+			// debug_mir: false,
+			// debug_resolver: false,
+			debug_type: false,
+		}
+	}
 }
 
 impl Cli {
 	pub fn mode(&self) -> Mode {
-		if self.check {
-			Mode::Check
-		} else if !self.emit.is_empty() {
-			Mode::Emit(self.emit.clone())
-		} else if let Some(print_item) = self.print.clone() {
-			Mode::Print(print_item)
+		if self.check_only {
+			Mode::CheckOnly
+		} else if !self.emit_stages.is_empty() {
+			Mode::EmitStages(self.emit_stages.clone())
+		} else if let Some(print_item) = &self.print_item {
+			Mode::Inspect(print_item.clone())
 		} else {
 			Mode::Build
 		}
 	}
 }
 
+/// Parse command-line arguments into a `Cli` struct.
 pub fn parse_args() -> Cli {
 	Cli::parse()
 }
