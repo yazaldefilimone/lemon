@@ -1,2 +1,2 @@
-pub mod hir;
+pub mod ir;
 pub mod lowering;
