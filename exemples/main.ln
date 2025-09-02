@@ -2,24 +2,3 @@ fn main() = {
   println("Hello, Lemon!");
   let mut a = true;
 }
-
-/*
-// HIR
-fn main(): void = {
-  std.println("Hello, Lemon!");
-  let mut a: bool = true;
-}
- */
-
- /*
- // MIR
-fn @main(): i32 = {
-  entry:
-    temp$0: str = "Hello, Lemon!";
-    std.println(temp$0);
-    temp$1: bool = true;
-    jump @end;
-  end:
-    ret 0;
-}
-*/
