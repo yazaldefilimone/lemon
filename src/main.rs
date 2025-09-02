@@ -14,6 +14,7 @@ mod mir;
 mod parser;
 mod reference;
 mod resolver;
+mod root_layers;
 mod span;
 mod symbols;
 mod token;

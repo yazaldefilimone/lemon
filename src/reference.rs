@@ -13,11 +13,11 @@ impl<T> Ref<T> {
 		Ref { pointer: Box::leak(boxed).into() }
 	}
 
-	fn inner(&self) -> &T {
+	pub fn inner(&self) -> &T {
 		unsafe { self.pointer.as_ref() }
 	}
 
-	fn inner_mut(&mut self) -> &mut T {
+	pub fn inner_mut(&mut self) -> &mut T {
 		unsafe { self.pointer.as_mut() }
 	}
 }
