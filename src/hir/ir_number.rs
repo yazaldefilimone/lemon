@@ -4,7 +4,7 @@ use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 
 use crate::{
-	checker::{store::TypeStore, types::TypeId},
+	checker::{context::store::TypeStore, types::TypeId},
 	error,
 	messages::Messages,
 	span::Span,
