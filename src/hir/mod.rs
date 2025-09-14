@@ -1,5 +1,4 @@
 mod ir_number;
-pub mod lowering;
 
 use ir_number::*;
 use std::borrow::Cow;
@@ -7,7 +6,7 @@ use std::borrow::Cow;
 use crate::{
 	ast::{BinaryOperator, Node},
 	checker::{
-		store::{FunctionStore, TypeStore},
+		context::store::{FunctionStore, TypeStore},
 		types::TypeId,
 	},
 	hir::NumberValue,
