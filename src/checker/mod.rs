@@ -1,5 +1,9 @@
-pub mod checker;
 pub mod context;
-pub mod scopes;
-pub mod store;
+pub mod synthesis;
 pub mod types;
+
+pub mod expressions;
+pub mod statements;
+pub mod variables;
+
+pub fn check(ctx: &mut context::Context, module: &ast::Module) {}
