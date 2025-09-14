@@ -41,7 +41,7 @@ pub enum Statement<'a> {
 	Enum(Node<Enum<'a>>),
 	Union(Node<Union<'a>>),
 	Function(Node<Function<'a>>),
-	Constant(Node<Constant<'a>>),
+	Const(Node<Constant<'a>>),
 	Let(Node<Let<'a>>),
 	Command(Node<Command<'a>>),
 	Expression(Node<Expression<'a>>),
