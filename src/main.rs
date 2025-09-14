@@ -101,7 +101,7 @@ fn build() {
 
 fn main() {
 	let arguments = cli::parse_args();
-	let file = arguments.input_file.to_path_buf();
+	let file = arguments.input.to_path_buf();
 	// let output = arguments.output.as_ref().map(|p| p.to_path_buf());
 
 	// let mut resolver = resolver::Resolver::new(file);
