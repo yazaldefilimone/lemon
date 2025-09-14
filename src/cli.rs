@@ -6,11 +6,11 @@ use std::path::PathBuf;
 pub struct Cli {
 	/// Path to the input source file.
 	#[arg(value_name = "INPUT_FILE")]
-	pub input_file: PathBuf,
+	pub input: PathBuf,
 
 	/// Optional output file path.
 	#[arg(short = 'o', long, value_name = "OUTPUT_FILE")]
-	pub output_file: Option<PathBuf>,
+	pub output: Option<PathBuf>,
 
 	/// Enable release mode optimizations.
 	#[arg(short = 'r', long)]
@@ -22,11 +22,11 @@ pub struct Cli {
 
 	/// emit intermediate representations (AST, HIR, MIR, LLVMIR).
 	#[arg(long, value_enum, value_delimiter = ',', value_name = "STAGES")]
-	pub emit_stages: Vec<EmitStage>,
+	pub emit: Vec<EmitStage>,
 
 	/// print internal compiler data (tokens, spans, types).
 	#[arg(long, value_enum, value_name = "ITEM")]
-	pub print_item: Option<PrintItem>,
+	pub print: Option<PrintItem>,
 }
 
 /// intermediate representation stages that can be emitted.
@@ -97,10 +97,10 @@ impl Default for OptimizerLevel {
 pub struct CompilerOptions {
 	pub release_mode: bool,
 	/// Path to the input source file.
-	pub input_file: PathBuf,
+	pub input: PathBuf,
 
 	/// Path to the output file (binary, object, etc.).
-	pub output_file: Option<PathBuf>,
+	pub output: Option<PathBuf>,
 
 	/// Optimization level (0–3, s, z).
 	pub optimizer_level: OptimizerLevel,
@@ -136,8 +136,8 @@ impl Default for CompilerOptions {
 	fn default() -> Self {
 		CompilerOptions {
 			release_mode: false,
-			input_file: PathBuf::new(),
-			output_file: None,
+			input: PathBuf::new(),
+			output: None,
 			optimizer_level: OptimizerLevel::default(),
 			mode: Mode::Build,
 			backend: Backend::default(),
@@ -160,9 +160,9 @@ impl Cli {
 	pub fn mode(&self) -> Mode {
 		if self.check_only {
 			Mode::CheckOnly
-		} else if !self.emit_stages.is_empty() {
-			Mode::EmitStages(self.emit_stages.clone())
-		} else if let Some(print_item) = &self.print_item {
+		} else if !self.emit.is_empty() {
+			Mode::EmitStages(self.emit.clone())
+		} else if let Some(print_item) = &self.print {
 			Mode::Inspect(print_item.clone())
 		} else {
 			Mode::Build
