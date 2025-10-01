@@ -1,6 +1,6 @@
 use crate::{
 	ast::Node,
-	checker::context::store::TypeStore,
+	checker::types::store::TypeStore,
 	error,
 	messages::Messages,
 	root_layers::RootLayers,
