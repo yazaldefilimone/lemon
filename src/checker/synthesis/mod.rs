@@ -1,5 +1,11 @@
-pub mod expressions;
-pub mod functions;
-pub mod literal;
-pub mod statements;
-pub mod variables;
+mod expressions;
+mod functions;
+mod literal;
+mod statements;
+mod variables;
+
+pub use expressions::*;
+pub use functions::*;
+pub use literal::*;
+pub use statements::*;
+pub use variables::*;
