@@ -1,14 +1,84 @@
 use std::num::NonZeroU32;
+pub mod reference;
+pub mod store;
+use rustc_hash::FxHashMap;
+
+use crate::{ast, checker::types::store::TypeStore, hir};
 
 // TODO: This should probably be a u64
 #[derive(Debug, Clone, Copy, Hash)]
 pub struct TypeId {
-	entry: u32,
+	pub entry: u32,
 }
 
 impl TypeId {
 	pub fn index(self) -> usize {
 		self.entry as usize
+	}
+
+	pub fn unusable() -> TypeId {
+		TypeId { entry: u32::MAX }
+	}
+
+	pub fn is_any_collapse(self, type_store: &TypeStore) -> bool {
+		type_store.direct_match(self, type_store.any_collapse_type_id)
+	}
+
+	pub fn is_noreturn(self, type_store: &TypeStore) -> bool {
+		type_store.direct_match(self, type_store.noreturn_type_id)
+	}
+
+	pub fn is_void(self, type_store: &TypeStore) -> bool {
+		type_store.direct_match(self, type_store.void_type_id)
+	}
+
+	pub fn is_untyped_number(self, type_store: &TypeStore) -> bool {
+		type_store.direct_match(self, type_store.number_type_id)
+	}
+	pub fn is_numeric(self, type_store: &TypeStore) -> bool {
+		let range = type_store.number_type_id.entry..=type_store.f64_type_id.entry;
+		range.contains(&self.entry) || self.is_any_collapse(type_store)
+	}
+
+	pub fn is_integer(self, type_store: &TypeStore, expression: &hir::Expression) -> bool {
+		let range = type_store.i8_type_id.entry..=type_store.usize_type_id.entry;
+
+		if range.contains(&self.entry) || self.is_any_collapse(type_store) {
+			return true;
+		}
+
+		match &expression.kind {
+			hir::ExpressionKind::NumberValue(value) => value.is_integer(),
+			_ => false,
+		}
+	}
+
+	pub fn is_pointer(self, type_store: &mut TypeStore) -> bool {
+		let entry = type_store.type_entries.get(self);
+		matches!(entry.kind, TypeEntryKind::Pointer { .. })
+	}
+	pub fn is_bool(self, type_store: &TypeStore) -> bool {
+		type_store.direct_match(self, type_store.bool_type_id)
+	}
+
+	pub fn is_string(self, type_store: &TypeStore) -> bool {
+		type_store.direct_match(self, type_store.string_type_id)
+	}
+
+	pub fn is_string_mut(self, type_store: &TypeStore) -> bool {
+		type_store.direct_match(self, type_store.string_mut_type_id)
+	}
+
+	pub fn is_format_string(self, type_store: &TypeStore) -> bool {
+		type_store.direct_match(self, type_store.format_string_type_id)
+	}
+
+	pub fn as_pointed(self, type_store: &mut TypeStore) -> Option<AsPointed> {
+		let entry = type_store.type_entries.get(self);
+		match entry.kind {
+			TypeEntryKind::Pointer(pointer) => Some(pointer.as_pointed()),
+			_ => None,
+		}
 	}
 }
 
@@ -126,24 +196,27 @@ pub enum PrimativeKind {
 	String,
 	StringMut,
 	FormatString,
+	AnyCollapse,
 }
 
 impl PrimativeKind {
 	pub fn name(self) -> &'static str {
 		match self {
-			PrimativeKind::NoReturn => "noreturn",
-			PrimativeKind::Void => "void",
-			PrimativeKind::UntypedNumber => "untyped number",
 			PrimativeKind::Bool => "bool",
 			PrimativeKind::Numeric(numeric) => numeric.name(),
 			PrimativeKind::String => "str",
 			PrimativeKind::StringMut => "strmut",
 			PrimativeKind::FormatString => "fstr",
+			PrimativeKind::AnyCollapse => "any collapse",
+			PrimativeKind::NoReturn => "noreturn",
+			PrimativeKind::Void => "void",
+			PrimativeKind::UntypedNumber => "untyped number",
 		}
 	}
 
 	pub fn layout(self) -> Layout {
 		match self {
+			PrimativeKind::AnyCollapse => Layout { size: 0, alignment: 1 },
 			PrimativeKind::NoReturn => Layout { size: 0, alignment: 1 },
 			PrimativeKind::Void => Layout { size: 0, alignment: 1 },
 			PrimativeKind::UntypedNumber => unreachable!(),
@@ -162,6 +235,20 @@ pub struct TypeEntry {
 	pub reference_entries: Option<u32>, // TODO: Use niche
 	pub arrays_index: Option<NonZeroU32>,
 	pub generic_poisoned: bool,
+}
+
+impl TypeEntry {
+	pub fn new(
+		kind: TypeEntryKind,
+		reference_entries: Option<u32>,
+		arrays_index: Option<NonZeroU32>,
+		generic_poisoned: bool,
+	) -> Self {
+		Self { kind, reference_entries, arrays_index, generic_poisoned }
+	}
+	pub fn new_kind(kind: TypeEntryKind) -> Self {
+		Self { kind, reference_entries: None, arrays_index: None, generic_poisoned: false }
+	}
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -191,13 +278,34 @@ impl TypeEntryKind {
 
 	pub fn methods_index(self) -> Option<usize> {
 		use TypeEntryKind::*;
-
 		match self {
 			BuiltinType(builtin_type) => Some(builtin_type.methods_index),
 			UserType(user_type) => Some(user_type.methods_index),
-
 			_ => None,
 		}
+	}
+	pub fn new_user_type(
+		shape_index: usize,
+		specialization_index: usize,
+		methods_index: usize,
+	) -> TypeEntryKind {
+		TypeEntryKind::UserType(UserType { shape_index, specialization_index, methods_index })
+	}
+
+	pub fn new_builtin_type(kind: PrimativeKind, methods_index: usize) -> TypeEntryKind {
+		TypeEntryKind::BuiltinType(BuiltinType { kind, methods_index })
+	}
+
+	pub fn new_pointer(type_id: TypeId, mutable: bool) -> TypeEntryKind {
+		TypeEntryKind::Pointer(Pointer { type_id, mutable })
+	}
+
+	pub fn new_array(item_type_id: TypeId, length: u64, array_type_index: usize) -> TypeEntryKind {
+		TypeEntryKind::Array(Array { item_type_id, length, array_type_index })
+	}
+
+	pub fn new_slice(item_type_id: TypeId, mutable: bool) -> TypeEntryKind {
+		TypeEntryKind::Slice(Slice { item_type_id, mutable })
 	}
 
 	// pub fn fallback_methods_index(self, type_store: &mut TypeStore) -> Option<usize> {
@@ -210,6 +318,24 @@ impl TypeEntryKind {
 	// 		_ => None,
 	// 	}
 	// }
+}
+
+#[derive(Debug)]
+pub struct MethodCollection<'a> {
+	pub methods_by_name: FxHashMap<&'a str, usize>, // Indicies into methods vec below
+	pub methods: Vec<MethodInfo>,
+}
+
+impl<'a> MethodCollection<'a> {
+	pub fn blank() -> Self {
+		Self { methods_by_name: FxHashMap::default(), methods: Vec::new() }
+	}
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MethodInfo {
+	pub function_shape_index: usize,
+	pub kind: ast::Node<ast::MethodKind>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -227,76 +353,63 @@ pub struct Slice {
 
 #[derive(Debug, Clone, Copy)]
 pub struct BuiltinType {
-	kind: PrimativeKind,
-	methods_index: usize,
+	pub kind: PrimativeKind,
+	pub methods_index: usize,
 }
 #[derive(Debug, Clone, Copy)]
 pub struct UserType {
-	shape_index: usize,
-	specialization_index: usize,
-	methods_index: usize,
+	pub shape_index: usize,
+	pub specialization_index: usize,
+	pub methods_index: usize,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct Pointer {
-	type_id: TypeId,
-	mutable: bool,
+	pub type_id: TypeId,
+	pub mutable: bool,
+}
+
+impl Pointer {
+	pub fn as_pointed(self) -> AsPointed {
+		AsPointed { type_id: self.type_id, mutable: self.mutable }
+	}
 }
 
 #[derive(Debug, Clone)]
 pub struct TypeEntries {
-	local_chunks: Vec<Option<Vec<TypeEntry>>>,
-	global_chunks: Vec<Vec<TypeEntry>>,
+	entries: Vec<TypeEntry>,
 }
-
-const TYPE_ENTRY_CHUNK_MAX_LENGTH: usize = 50;
 
 impl TypeEntries {
 	pub fn new() -> TypeEntries {
 		TypeEntries {
-			local_chunks: Vec::new(),
-			global_chunks: vec![Vec::with_capacity(TYPE_ENTRY_CHUNK_MAX_LENGTH)],
+			entries: Vec::with_capacity(128), // Pre-allocate for common case
 		}
 	}
 
-	pub fn push_entry(&mut self, entry: TypeEntry) -> TypeId {
-		let last_chunk = self.global_chunks.last_mut().unwrap();
-
-		if last_chunk.len() >= TYPE_ENTRY_CHUNK_MAX_LENGTH {
-			self.global_chunks.push(Vec::with_capacity(TYPE_ENTRY_CHUNK_MAX_LENGTH));
-		}
-
-		let full_chunks = self.global_chunks.len() - 1;
-		let chunk = self.global_chunks.last_mut().unwrap();
-		let index = chunk.len() + (full_chunks * TYPE_ENTRY_CHUNK_MAX_LENGTH);
-		chunk.push(entry);
-		TypeId { entry: index as u32 }
+	pub fn push(&mut self, entry: TypeEntry) -> TypeId {
+		let id = self.entries.len() as u32;
+		self.entries.push(entry);
+		TypeId { entry: id }
 	}
 
-	pub fn get(&mut self, type_id: TypeId) -> TypeEntry {
-		let overall_index = type_id.entry as usize;
-		let index = overall_index % TYPE_ENTRY_CHUNK_MAX_LENGTH;
-		let chunk_index = overall_index / TYPE_ENTRY_CHUNK_MAX_LENGTH;
-
-		// Atualiza local chunk se necessário
-		if chunk_index >= self.local_chunks.len() || self.local_chunks[chunk_index].is_none() {
-			self.update_chunk(chunk_index);
-		}
-
-		self.local_chunks[chunk_index].as_ref().unwrap()[index]
+	pub fn get(&self, type_id: TypeId) -> &TypeEntry {
+		&self.entries[type_id.index()]
 	}
 
-	fn update_chunk(&mut self, chunk_index: usize) {
-		while self.local_chunks.len() <= chunk_index {
-			self.local_chunks.push(None);
-		}
+	pub fn get_mut(&mut self, type_id: TypeId) -> &mut TypeEntry {
+		&mut self.entries[type_id.index()]
+	}
 
-		let local_chunk = &mut self.local_chunks[chunk_index];
-		if local_chunk.is_some() {
-			local_chunk.as_mut().unwrap().clear();
-			local_chunk.as_mut().unwrap().extend_from_slice(&self.global_chunks[chunk_index]);
-		} else {
-			*local_chunk = Some(self.global_chunks[chunk_index].clone());
-		}
+	pub fn iter(&self) -> impl Iterator<Item = (TypeId, &TypeEntry)> {
+		self.entries.iter().enumerate().map(|(i, entry)| (TypeId { entry: i as u32 }, entry))
+	}
+
+	pub fn len(&self) -> usize {
+		self.entries.len()
+	}
+
+	pub fn is_empty(&self) -> bool {
+		self.entries.is_empty()
 	}
 }
