@@ -117,7 +117,9 @@ pub fn parse_let_statement<'a>(
 	let expression = super::parse_expression(reader, messages, true)?;
 	span += expression.span;
 
-	let declaration = ast::Let { name, parsed_type, expression, mutable };
+	let pattern = ast::Pattern::Identifier(name);
+
+	let declaration = ast::Let { pattern, parsed_type, expression, mutable };
 	Ok(ast::Node::from_span(declaration, span))
 }
 
