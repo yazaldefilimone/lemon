@@ -5,9 +5,9 @@ use std::borrow::Cow;
 
 use crate::{
 	ast::{BinaryOperator, Node},
-	checker::{
-		context::store::{FunctionStore, TypeStore},
-		types::TypeId,
+	checker::types::{
+		store::{FunctionStore, TypeStore},
+		TypeId,
 	},
 	hir::NumberValue,
 	messages::Messages,
