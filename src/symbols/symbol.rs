@@ -1,4 +1,4 @@
-use std::{collections::hash_map, path::PathBuf};
+use std::{collections::hash_map, fmt, path::PathBuf};
 
 use rustc_hash::FxHashMap;
 
@@ -13,6 +13,67 @@ pub struct Symbol<'a> {
 	pub span: Option<Span>,
 	pub used: bool,
 	pub imported: bool,
+}
+
+impl<'a> Symbol<'a> {
+	/// Create a new symbol
+	pub fn new(name: &'a str, kind: SymbolKind<'a>, span: Option<Span>) -> Self {
+		let mut symbol = Self { name, kind, span, used: false, imported: false };
+
+		// Symbols starting with _ are automatically marked as used
+		if name.starts_with('_') {
+			symbol.used = true;
+		}
+
+		symbol
+	}
+
+	/// Create a builtin type symbol
+	pub fn builtin_type(name: &'a str, type_id: TypeId, methods_index: usize) -> Self {
+		Self::new(name, SymbolKind::BuiltinType { type_id, methods_index }, None)
+	}
+
+	/// Create a function symbol
+	pub fn function(name: &'a str, function_shape_index: usize, span: Span) -> Self {
+		Self::new(name, SymbolKind::Function { function_shape_index }, Some(span))
+	}
+
+	/// Create a variable symbol
+	pub fn variable(name: &'a str, readable_index: usize, mutable: bool, span: Span) -> Self {
+		let kind =
+			if mutable { SymbolKind::Mut { readable_index } } else { SymbolKind::Let { readable_index } };
+		Self::new(name, kind, Some(span))
+	}
+
+	/// Check if this symbol represents a type
+	pub fn is_type(&self) -> bool {
+		matches!(
+			self.kind,
+			SymbolKind::BuiltinType { .. }
+				| SymbolKind::UserType { .. }
+				| SymbolKind::UserTypeGeneric { .. }
+		)
+	}
+
+	/// Check if this symbol represents a value
+	pub fn is_value(&self) -> bool {
+		matches!(
+			self.kind,
+			SymbolKind::Let { .. }
+				| SymbolKind::Mut { .. }
+				| SymbolKind::Const { .. }
+				| SymbolKind::Static { .. }
+				| SymbolKind::Function { .. }
+		)
+	}
+
+	/// Get the type ID if this symbol has one
+	pub fn type_id(&self) -> Option<TypeId> {
+		match self.kind {
+			SymbolKind::BuiltinType { type_id, .. } => Some(type_id),
+			_ => None,
+		}
+	}
 }
 
 #[derive(Debug, Clone)]
