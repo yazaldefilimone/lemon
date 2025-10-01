@@ -56,10 +56,19 @@ pub enum Statement<'a> {
 
 #[derive(Debug)]
 pub struct Let<'a> {
-	pub name: Node<&'a str>,
+	pub pattern: Pattern<'a>,
 	pub parsed_type: Option<Node<Type<'a>>>,
 	pub expression: Node<Expression<'a>>,
 	pub mutable: bool,
+}
+
+#[derive(Debug)]
+pub enum Pattern<'a> {
+	Identifier(Node<&'a str>),
+	Tuple(Vec<Node<Pattern<'a>>>),
+	Array(Vec<Node<Pattern<'a>>>),
+	Struct { name: Node<&'a str>, fields: Vec<Node<Pattern<'a>>> },
+	Wildcard,
 }
 
 #[derive(Debug)]
@@ -99,6 +108,12 @@ pub enum Expression<'a> {
 pub struct IfElseChain<'a> {
 	pub entries: Vec<IfElseEntry<'a>>,
 	pub else_body: Option<Block<'a>>,
+}
+
+impl<'a> IfElseChain<'a> {
+	pub fn new(entries: Vec<IfElseEntry<'a>>, else_body: Option<Block<'a>>) -> Self {
+		Self { entries, else_body }
+	}
 }
 
 #[derive(Debug)]
@@ -218,7 +233,7 @@ impl<'a> Function<'a> {
 pub struct Constant<'a> {
 	pub name: Node<&'a str>,
 	pub ty: Option<Type<'a>>,
-	pub expression: Expression<'a>,
+	pub expression: Node<Expression<'a>>,
 }
 
 #[derive(Debug)]
@@ -351,14 +366,32 @@ pub struct NumberLiteral {
 	pub value: Node<Decimal>,
 }
 
+impl NumberLiteral {
+	pub fn new(value: Node<Decimal>) -> Self {
+		Self { value }
+	}
+}
+
 #[derive(Debug, Clone)]
 pub struct StringLiteral<'a> {
 	pub value: Cow<'a, str>,
 }
 
+impl<'a> StringLiteral<'a> {
+	pub fn new(value: Cow<'a, str>) -> Self {
+		Self { value }
+	}
+}
+
 #[derive(Debug)]
 pub struct FormatStringLiteral<'a> {
-	pub items: Vec<FormatStringItem<'a>>,
+	pub items: Vec<Node<FormatStringItem<'a>>>,
+}
+
+impl<'a> FormatStringLiteral<'a> {
+	pub fn new(items: Vec<Node<FormatStringItem<'a>>>) -> Self {
+		Self { items }
+	}
 }
 
 #[derive(Debug)]
@@ -367,10 +400,26 @@ pub enum FormatStringItem<'a> {
 	Expression(Expression<'a>),
 }
 
+impl<'a> FormatStringItem<'a> {
+	pub fn new_text(text: Cow<'a, str>) -> Self {
+		Self::Text(text)
+	}
+
+	pub fn new_expression(expression: Expression<'a>) -> Self {
+		Self::Expression(expression)
+	}
+}
+
 #[derive(Debug)]
 pub struct ArrayLiteral<'a> {
 	pub ty: Option<Type<'a>>,
-	pub elements: Vec<Expression<'a>>,
+	pub elements: Vec<Node<Expression<'a>>>,
+}
+
+impl<'a> ArrayLiteral<'a> {
+	pub fn new(ty: Option<Type<'a>>, elements: Vec<Node<Expression<'a>>>) -> Self {
+		Self { ty, elements }
+	}
 }
 
 #[derive(Debug)]
@@ -378,6 +427,12 @@ pub struct SliceLiteral<'a> {
 	pub ty: Option<Type<'a>>,
 	pub elements: Vec<Expression<'a>>,
 	pub mutable: bool,
+}
+
+impl<'a> SliceLiteral<'a> {
+	pub fn new(ty: Option<Type<'a>>, elements: Vec<Expression<'a>>, mutable: bool) -> Self {
+		Self { ty, elements, mutable }
+	}
 }
 
 #[derive(Debug)]
@@ -394,13 +449,25 @@ impl<'a> StructLiteral<'a> {
 
 #[derive(Debug)]
 pub struct StructInitializer<'a> {
-	pub field_initializers: Vec<FieldInitializer<'a>>,
+	pub field_initializers: Vec<Node<FieldInitializer<'a>>>,
+}
+
+impl<'a> StructInitializer<'a> {
+	pub fn new(field_initializers: Vec<Node<FieldInitializer<'a>>>) -> Self {
+		Self { field_initializers }
+	}
 }
 
 #[derive(Debug)]
 pub struct FieldInitializer<'a> {
 	pub name: Node<&'a str>,
 	pub expression: Expression<'a>,
+}
+
+impl<'a> FieldInitializer<'a> {
+	pub fn new(name: Node<&'a str>, expression: Expression<'a>) -> Self {
+		Self { name, expression }
+	}
 }
 
 #[derive(Debug)]
@@ -464,14 +531,34 @@ impl<'a> UnaryOperation<'a> {
 
 #[derive(Debug)]
 pub enum UnaryOperator<'a> {
-	Negate,
-	Invert,
-	BitwiseNot,
-	AddressOf,
-	AddressOfMut,
-	Dereference,
-	Cast { parsed_type: Node<Type<'a>> },
-	Index { expression: Node<Expression<'a>> },
+	Negate,                                     // -expr
+	Invert,                                     // !expr  (booleano, lógico)
+	BitwiseNot,                                 // ~expr  (bit a bit)
+	AddressOf { mutable: bool },                // &expr / &mut expr
+	Dereference,                                // *expr
+	Cast { parsed_type: Node<Type<'a>> },       // expr as <type>
+	Index { expression: Node<Expression<'a>> }, // expr[index]
+}
+
+impl<'a> UnaryOperator<'a> {
+	pub fn name(&self) -> &'static str {
+		use UnaryOperator::*;
+		match self {
+			Negate => "Negate",
+			Invert => "Invert",
+			BitwiseNot => "Bitwise not",
+			AddressOf { mutable } => {
+				if *mutable {
+					"Mutable address of"
+				} else {
+					"Address of"
+				}
+			}
+			Dereference => "Dereference",
+			Cast { .. } => "Cast",
+			Index { .. } => "Index",
+		}
+	}
 }
 
 #[derive(Debug)]
