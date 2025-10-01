@@ -1,4 +1,10 @@
-use crate::{messages::Messages, parser::parse_file, resolver::loader::load_single_file};
+use crate::{
+	checker::{context, types},
+	cli::CompilerOptions,
+	messages::Messages,
+	parser::parse_file,
+	resolver::loader::load_single_file,
+};
 
 mod ast;
 mod checker;
@@ -20,8 +26,35 @@ mod symbols;
 mod token;
 mod token_reader;
 
-fn check() {
-	println!("check");
+fn check(path: &std::path::Path) {
+	let options = CompilerOptions::default();
+	let mut files = Vec::new();
+	let index = files.len() as u32;
+	if let Err(e) = load_single_file(path.to_path_buf(), &mut files) {
+		eprintln!("error: {}", e);
+		std::process::exit(1);
+	}
+	let file = files.get(index as usize).unwrap();
+	let mut messages = Messages::new(file);
+	let mut lexer = lexer::Lexer::new(index, &file.source);
+	let mut token_reader = lexer.reader(&mut messages);
+	let ast_file = parse_file(&file, &mut token_reader, &mut messages);
+	messages.print("parser");
+	let mut type_store = types::store::TypeStore::new();
+	let mut function_store = types::store::FunctionStore::new();
+	let mut readables = symbols::Readables::new();
+
+	let mut ctx = context::Context::new(
+		index,
+		&options,
+		&mut messages,
+		&mut type_store,
+		&mut function_store,
+		&mut readables,
+	);
+	checker::check_file(&mut ctx, &ast_file);
+
+	ctx.messages.print("checker");
 }
 
 fn emit(stages: &[cli::EmitStage], path: &std::path::Path) {
@@ -37,10 +70,11 @@ fn emit(stages: &[cli::EmitStage], path: &std::path::Path) {
 			let mut messages = Messages::new(file);
 			let mut lexer = lexer::Lexer::new(index, &file.source);
 			let mut token_reader = lexer.reader(&mut messages);
-			let file = parse_file(&file, &mut token_reader, &mut messages);
+			let ast_file = parse_file(&file, &mut token_reader, &mut messages);
 			messages.print("parser");
-			println!("{:#?}", file);
+			println!("{:#?}", ast_file);
 		}
+
 		[cli::EmitStage::HIR] => {
 			let mut messages = Messages::new(file);
 			let mut lexer = lexer::Lexer::new(index, &file.source);
@@ -113,6 +147,6 @@ fn main() {
 		cli::Mode::EmitStages(stages) => emit(&stages, &file),
 		cli::Mode::Inspect(item) => print(item, &file),
 		cli::Mode::Build => build(),
-		cli::Mode::CheckOnly => check(),
+		cli::Mode::CheckOnly => check(&file),
 	}
 }
