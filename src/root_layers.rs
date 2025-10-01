@@ -55,4 +55,8 @@ impl<'a> RootLayers<'a> {
 		}
 		None
 	}
+
+	pub fn empty() -> Self {
+		Self::new("")
+	}
 }
