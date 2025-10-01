@@ -1,89 +1,98 @@
-use crate::{checker::context::Context, messages::Messages};
+use crate::checker::{context::Context, types::TypeId};
+use crate::{ast, checker};
 
 pub fn synthesise_statement<'a, 'b>(
-	context: &mut Context<'a, 'b>,
-	messages: &mut Messages,
-	statement: &'b crate::ast::Statement,
-) {
-	todo!("synthesise_statement");
+	ctx: &mut Context<'a, 'b>,
+	statement: &'a ast::Statement,
+) -> checker::Result<TypeId> {
+	match statement {
+		ast::Statement::Let(let_decl) => super::synthesise_let(ctx, let_decl),
+		ast::Statement::Const(const_decl) => super::synthesise_constant(ctx, const_decl),
+		ast::Statement::Expression(expr) => super::synthesise_expression(ctx, expr),
+		ast::Statement::Function(function) => super::synthesise_function(ctx, function),
+		_ => unimplemented!(),
+	}
 }
 
-pub fn synthesise_let<'a, 'b>(
-	context: &mut Context<'a, 'b>,
-	messages: &mut Messages,
-	let_: &'b crate::ast::Let,
-) {
-	todo!("synthesise_let");
-}
+pub fn synthesise_block<'a, 'b>(
+	ctx: &mut Context<'a, 'b>,
+	block: &'a ast::Block,
+) -> checker::Result<TypeId> {
+	// Enter new block scope
+	let guard = ctx.enter_block_scope();
 
-pub fn synthesise_constant<'a, 'b>(
-	context: &mut Context<'a, 'b>,
-	messages: &mut Messages,
-	constant: &'b crate::ast::Constant,
-) {
-	todo!("synthesise_constant");
-}
+	let mut last_type = ctx.type_store.void_type_id;
 
-pub fn synthesise_command<'a, 'b>(
-	context: &mut Context<'a, 'b>,
-	messages: &mut Messages,
-	command: &'b crate::ast::Command,
-) {
-	todo!("synthesise_command");
-}
+	// Process all statements
+	for statement in &block.statements {
+		last_type = super::synthesise_statement(ctx, statement)?;
+	}
 
-// pub fn synthesise_return<'a, 'b>(
-// 	context: &mut Context<'a, 'b>,
-// 	messages: &mut Messages,
-// 	return_: &'b crate::ast::Return,
-// ) {
-// 	todo!("synthesise_return");
+	// Exit scope
+	ctx.exit_scope(guard);
+
+	Ok(last_type)
+}
+// pub fn synthesise_return<'a, 'b>(ctx: &mut Context<'a, 'b>, ret: &'b ast::Return) -> TypeId {
+// 	// Check if we're in a function
+// 	let expected_return_type = if let Some(return_type) = ctx.current_return_type() {
+// 		return_type
+// 	} else {
+// 		ctx.error("return statement outside of function", Some(ret.span));
+// 		return ctx.type_store.noreturn_type_id;
+// 	};
+
+// 	// Synthesise return value if present
+// 	let actual_return_type = if let Some(value) = &ret.value {
+// 		synthesis::synthesise_expression(ctx, value)
+// 	} else {
+// 		ctx.type_store.void_type_id
+// 	};
+
+// 	// Type check return value
+// 	if !ctx.types_match(expected_return_type, actual_return_type) {
+// 		ctx.error(format!("return type mismatch"), Some(ret.span));
+// 	}
+
+// 	// Mark that we've seen a return
+// 	ctx.mark_all_paths_return();
+
+// 	// Return statements don't produce a value
+// 	ctx.type_store.noreturn_type_id
 // }
 
-// pub fn synthesise_break<'a, 'b>(
-// 	context: &mut Context<'a, 'b>,
-// 	messages: &mut Messages,
-// 	break_: &'b crate::ast::Break,
-// ) {
-// 	todo!("synthesise_break");
+// pub fn synthesise_break<'a, 'b>(ctx: &mut Context<'a, 'b>, brk: &'b crate::ast::Break) -> TypeId {
+// 	// Check if we're in a loop
+// 	if !ctx.in_loop() {
+// 		ctx.error("break statement outside of loop", Some(brk.span));
+// 	}
+
+// 	// TODO: Handle labeled breaks
+
+// 	// Break statements don't produce a value
+// 	ctx.type_store.noreturn_type_id
 // }
 
 // pub fn synthesise_continue<'a, 'b>(
-// 	context: &mut Context<'a, 'b>,
-// 	messages: &mut Messages,
-// 	continue_: &'b crate::ast::Continue,
-// ) {
-// 	todo!("synthesise_continue");
+// 	ctx: &mut Context<'a, 'b>,
+// 	cont: &'b crate::ast::Continue,
+// ) -> TypeId {
+// 	// Check if we're in a loop
+// 	if !ctx.in_loop() {
+// 		ctx.error("continue statement outside of loop", Some(cont.span));
+// 	}
+
+// 	// TODO: Handle labeled continues
+
+// 	// Continue statements don't produce a value
+// 	ctx.type_store.noreturn_type_id
 // }
 
-// pub fn synthesise_if<'a, 'b>(
-// 	context: &mut Context<'a, 'b>,
-// 	messages: &mut Messages,
-// 	if_: &'b crate::ast::If,
-// ) {
-// 	todo!("synthesise_if");
+// pub fn synthesise_command<'a, 'b>(
+// 	ctx: &mut Context<'a, 'b>,
+// 	command: &'b ast::Node<ast::Command>,
+// ) -> TypeId {
+// 	// Commands are like macro invocations
+// 	// TODO: Implement command synthesis properly
+// 	ctx.type_store.void_type_id
 // }
-
-pub fn synthesise_while<'a, 'b>(
-	context: &mut Context<'a, 'b>,
-	messages: &mut Messages,
-	while_: &'b crate::ast::While,
-) {
-	todo!("synthesise_while");
-}
-
-pub fn synthesise_for<'a, 'b>(
-	context: &mut Context<'a, 'b>,
-	messages: &mut Messages,
-	for_: &'b crate::ast::For,
-) {
-	todo!("synthesise_for");
-}
-
-pub fn synthesise_match<'a, 'b>(
-	context: &mut Context<'a, 'b>,
-	messages: &mut Messages,
-	match_: &'b crate::ast::Match,
-) {
-	todo!("synthesise_match");
-}
