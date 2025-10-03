@@ -1,6 +1,6 @@
-mod ir_number;
+mod number;
 
-use ir_number::*;
+use number::*;
 use std::borrow::Cow;
 
 use crate::{
@@ -12,9 +12,36 @@ use crate::{
 	hir::NumberValue,
 	messages::Messages,
 	reference::{Ref, SliceRef},
+	resolver::file::SourceFile,
 	root_layers::RootLayer,
 	span::{Location, Span},
 };
+
+#[derive(Debug)]
+
+pub struct File<'a> {
+	pub block: Block<'a>,
+	pub file: &'a SourceFile,
+}
+
+impl<'a> File<'a> {
+	pub fn new(block: Block<'a>, file: &'a SourceFile) -> Self {
+		Self { block, file }
+	}
+}
+
+#[derive(Debug)]
+pub struct Block<'a> {
+	pub type_id: TypeId,
+	pub returns: bool,
+	pub statements: Vec<Statement<'a>>,
+}
+
+impl<'a> Block<'a> {
+	pub fn new() -> Self {
+		Self { type_id: TypeId::unusable(), returns: false, statements: Vec::new() }
+	}
+}
 
 #[derive(Debug)]
 pub struct Statement<'a> {
@@ -70,13 +97,6 @@ pub struct Yield<'a> {
 #[derive(Debug)]
 pub struct Return<'a> {
 	pub expression: Option<Expression<'a>>,
-}
-
-#[derive(Debug)]
-pub struct Block<'a> {
-	pub type_id: TypeId,
-	pub returns: bool,
-	pub statements: Vec<Statement<'a>>,
 }
 
 #[derive(Debug)]
