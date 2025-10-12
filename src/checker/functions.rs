@@ -65,6 +65,7 @@ pub fn check_parameter<'a>(
 	let readable_index = 0;
 	let mutable = parameter.mutable;
 	let symbol = symbols::Symbol::variable(name_node.item, readable_index, mutable, span);
+	// ctx.scopes.current_mut().readables.push(name, type_id, kind, is_pointer_access_mutable);
 	// ctx.readables.push(name, type_id, kind, is_pointer_access_mutable);
 	let hir_type = super::types::check_type(ctx, &parameter.param_type);
 

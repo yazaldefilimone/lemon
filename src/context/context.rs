@@ -1,6 +1,5 @@
-use crate::{
-	cli, context::scope, hir, messages, root_layers, span::Span, store, symbols, types::TypeId,
-};
+use crate::{cli, context::scope};
+use crate::{hir, messages, root_layers, span::Span, store, symbols, types::TypeId};
 use store::{function_store, type_store};
 
 #[derive(Debug)]
@@ -12,9 +11,9 @@ pub struct Context<'a, 'b> {
 	pub function_store: &'b mut function_store::FunctionStore<'a>,
 	pub constants: &'b mut Vec<hir::ConstantValue<'a>>,
 
-	pub readables: &'b mut symbols::Readables<'a>,
+	// pub readables: &'b mut symbols::Readables<'a>,
 	pub root_layers: &'b mut root_layers::RootLayers<'a>,
-	pub scopes: scope::Scopes<'a>,
+	pub scopes: scope::Scopes<'a, 'b>,
 }
 
 impl<'a, 'b> Context<'a, 'b> {
@@ -27,7 +26,7 @@ impl<'a, 'b> Context<'a, 'b> {
 		readables: &'b mut symbols::Readables<'a>,
 		root_layers: &'b mut root_layers::RootLayers<'a>,
 	) -> Self {
-		let scopes = scope::Scopes::new();
+		let scopes = scope::Scopes::new(readables);
 
 		Self {
 			compiler_options,
@@ -36,7 +35,7 @@ impl<'a, 'b> Context<'a, 'b> {
 			type_store,
 			function_store,
 			constants,
-			readables,
+			// readables,
 			root_layers,
 		}
 	}

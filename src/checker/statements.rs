@@ -20,6 +20,10 @@ pub fn check_statement<'a, 'b>(
 			super::functions::check_function(ctx, function);
 			None
 		}
+		ast::Statement::Expression(expression) => {
+			let hir_expression = super::expressions::check_expression(ctx, expression);
+			Some(hir::Statement::Expression(hir_expression))
+		}
 		_ => todo!(),
 	}
 }

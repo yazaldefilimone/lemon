@@ -1,4 +1,4 @@
-use crate::{ast, reference::Ref, symbols::scope::Symbols};
+use crate::{ast, reference::Ref};
 use rustc_hash::FxHashMap;
 
 #[derive(Debug)]
@@ -11,12 +11,16 @@ pub struct RootLayers<'a> {
 pub struct RootLayer<'a> {
 	pub name: &'a str,
 	pub children: FxHashMap<&'a str, Ref<RootLayer<'a>>>,
-	pub symbols: Symbols<'a>,
+	// pub symbols: Symbols<'a>,
 }
 
 impl<'a> RootLayer<'a> {
 	pub fn new(name: &'a str) -> Self {
-		RootLayer { name, children: FxHashMap::default(), symbols: Symbols::new() }
+		RootLayer {
+			name,
+			children: FxHashMap::default(),
+			// symbols: Symbols::new()
+		}
 	}
 }
 

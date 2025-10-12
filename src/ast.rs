@@ -477,20 +477,20 @@ impl<'a> FieldInitializer<'a> {
 
 #[derive(Debug)]
 pub struct Call<'a> {
-	pub base: Option<Box<Node<Expression<'a>>>>,
-	pub name: Node<&'a str>,
+	pub receiver: Option<Box<Node<Expression<'a>>>>,
+	pub callable: Node<&'a str>,
 	pub type_arguments: Vec<Type<'a>>,
 	pub arguments: Vec<Argument<'a>>,
 }
 
 impl<'a> Call<'a> {
 	pub fn new(
-		base: Option<Node<Expression<'a>>>,
-		name: Node<&'a str>,
+		receiver: Option<Node<Expression<'a>>>,
+		callable: Node<&'a str>,
 		type_arguments: Vec<Type<'a>>,
 		arguments: Vec<Argument<'a>>,
 	) -> Self {
-		Self { base: base.map(Box::new), name, type_arguments, arguments }
+		Self { receiver: receiver.map(Box::new), callable, type_arguments, arguments }
 	}
 }
 
