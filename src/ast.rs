@@ -199,7 +199,7 @@ pub struct Union<'a> {
 pub struct Function<'a> {
 	pub name: Node<&'a str>,
 	pub generics: Vec<GenericName<'a>>,
-	pub parameters: Vec<Parameter<'a>>,
+	pub parameters: Node<Parameters<'a>>,
 	pub return_type: Option<Node<Type<'a>>>,
 	pub body: Option<Node<Block<'a>>>,
 	pub extern_attribute: Option<&'a Node<ExternAttribute<'a>>>,
@@ -211,7 +211,7 @@ pub struct Function<'a> {
 impl<'a> Function<'a> {
 	pub fn new(
 		name: Node<&'a str>,
-		parameters: Vec<Parameter<'a>>,
+		parameters: Node<Parameters<'a>>,
 		return_type: Option<Node<Type<'a>>>,
 		body: Option<Node<Block<'a>>>,
 	) -> Self {
@@ -229,6 +229,18 @@ impl<'a> Function<'a> {
 	}
 }
 
+#[derive(Debug)]
+pub struct Parameters<'a> {
+	pub parameters: Vec<Node<Parameter<'a>>>,
+	pub c_varargs: Option<Span>,
+}
+
+#[derive(Debug)]
+pub struct Parameter<'a> {
+	pub name: Node<&'a str>,
+	pub param_type: Node<Type<'a>>,
+	pub mutable: bool,
+}
 #[derive(Debug)]
 pub struct Constant<'a> {
 	pub name: Node<&'a str>,
@@ -335,13 +347,6 @@ pub struct StructLikeVariant<'a> {
 pub struct TransparentVariant<'a> {
 	pub name: Node<&'a str>,
 	pub ty: Type<'a>,
-}
-
-#[derive(Debug)]
-pub struct Parameter<'a> {
-	pub name: Node<&'a str>,
-	pub param_type: Node<Type<'a>>,
-	pub mutable: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
