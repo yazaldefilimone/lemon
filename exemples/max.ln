@@ -1,4 +1,5 @@
+fn prit() = {}
 
 fn main() = {
-  println("Hello, Lemon!")
+  prit();
 }
