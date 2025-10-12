@@ -69,11 +69,16 @@ impl Note {
 pub struct Messages<'a> {
 	pub list: Vec<Message>,
 	pub file: &'a SourceFile,
+	pub main_function_span: Option<Span>,
 }
 
 impl<'a> Messages<'a> {
 	pub fn new(file: &'a SourceFile) -> Self {
-		Self { list: vec![], file }
+		Self { list: vec![], file, main_function_span: None }
+	}
+
+	pub fn mark_main_found(&mut self, span: Span) {
+		self.main_function_span = Some(span);
 	}
 
 	pub fn message(&mut self, message: Message) {
