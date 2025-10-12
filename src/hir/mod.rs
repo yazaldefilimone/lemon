@@ -1,34 +1,17 @@
 mod number;
-
-use number::*;
+pub use number::*;
+use rustc_hash::FxHashMap;
 use std::borrow::Cow;
 
 use crate::{
 	ast::{BinaryOperator, Node},
-	checker::types::{
-		store::{FunctionStore, TypeStore},
-		TypeId,
-	},
-	hir::NumberValue,
 	messages::Messages,
 	reference::{Ref, SliceRef},
-	resolver::file::SourceFile,
 	root_layers::RootLayer,
-	span::{Location, Span},
+	span::Span,
+	store::{function_store::FunctionStore, type_store},
+	types::TypeId,
 };
-
-#[derive(Debug)]
-
-pub struct File<'a> {
-	pub block: Block<'a>,
-	pub file: &'a SourceFile,
-}
-
-impl<'a> File<'a> {
-	pub fn new(block: Block<'a>, file: &'a SourceFile) -> Self {
-		Self { block, file }
-	}
-}
 
 #[derive(Debug)]
 pub struct Block<'a> {
@@ -46,7 +29,14 @@ impl<'a> Block<'a> {
 #[derive(Debug)]
 pub struct Statement<'a> {
 	pub kind: StatementKind<'a>,
-	pub location: Location,
+	// pub location: Location,
+	pub span: Span,
+}
+
+impl<'a> Statement<'a> {
+	pub fn new(kind: StatementKind<'a>, span: Span) -> Self {
+		Self { kind, span }
+	}
 }
 
 #[derive(Debug)]
@@ -58,6 +48,7 @@ pub enum StatementKind<'a> {
 	For(For<'a>),
 
 	Let(Let<'a>),
+	Const(Const<'a>),
 
 	Defer(Box<Defer<'a>>),
 
@@ -66,11 +57,25 @@ pub enum StatementKind<'a> {
 	Return(Return<'a>),
 }
 #[derive(Debug)]
+pub enum ConstantValue<'a> {
+	AnyCollapse,
+	NumberValue(NumberValue),
+	CodepointLiteral(char),
+	StringLiteral(Cow<'a, str>),
+}
+#[derive(Debug)]
 pub struct Let<'a> {
 	pub name: &'a str,
 	pub type_id: TypeId,
 	pub expression: Option<Expression<'a>>,
 	pub readable_index: usize,
+}
+
+#[derive(Debug)]
+pub struct Const<'a> {
+	pub name: &'a str,
+	pub type_id: TypeId,
+	pub expression: Expression<'a>,
 }
 
 #[derive(Debug)]
@@ -139,7 +144,20 @@ pub struct Expression<'a> {
 	pub is_pointer_access_mutable: bool,
 	pub returns: bool,
 	pub kind: ExpressionKind<'a>,
-	pub location: Location,
+	// pub location: Location,
+}
+
+impl<'a> Expression<'a> {
+	pub fn new(type_id: TypeId, kind: ExpressionKind<'a>, span: Span) -> Self {
+		Self {
+			type_id,
+			kind,
+			span,
+			is_itself_mutable: false,
+			is_pointer_access_mutable: false,
+			returns: false,
+		}
+	}
 }
 
 #[derive(Debug)]
@@ -232,7 +250,7 @@ impl TypeArguments {
 	pub fn specialize_with_generics<'a>(
 		&mut self,
 		messages: &mut Messages<'a>,
-		type_store: &mut TypeStore<'a>,
+		type_store: &mut type_store::TypeStore<'a>,
 		function_store: &FunctionStore<'a>,
 		module_path: &'a [String],
 		// generic_usages: &mut Vec<GenericUsage>,
@@ -255,6 +273,56 @@ impl TypeArguments {
 		// }
 	}
 }
+
+#[derive(Debug)]
+pub struct FunctionShape<'a> {
+	pub name: Node<&'a str>,
+	pub main: bool,
+	pub parameters: Node<Vec<ParameterShape<'a>>>,
+	pub c_varargs: Option<Span>,
+	pub return_type: Node<TypeId>,
+	pub block: Option<Ref<Block<'a>>>,
+	pub specializations_by_type_arguments: FxHashMap<Ref<TypeArguments>, usize>,
+	pub specializations: Vec<Function>,
+}
+
+impl<'a> FunctionShape<'a> {
+	pub fn new(
+		name: Node<&'a str>,
+		main: bool,
+		parameters: Node<Vec<ParameterShape<'a>>>,
+		c_varargs: Option<Span>,
+		return_type: Node<TypeId>,
+	) -> Self {
+		let specializations_by_type_arguments = FxHashMap::default();
+		let specializations = Vec::new();
+
+		Self {
+			name,
+			main,
+			parameters,
+			c_varargs,
+			return_type,
+			block: None,
+			specializations_by_type_arguments,
+			specializations,
+		}
+	}
+
+	pub fn add_block(&mut self, block: Ref<Block<'a>>) {
+		self.block = Some(block);
+	}
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ParameterShape<'a> {
+	pub span: Span,
+	pub label: Option<&'a str>,
+	pub type_id: TypeId,
+	pub readable_index: usize,
+	pub mutable: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct Function {
 	pub type_arguments: Ref<TypeArguments>,
@@ -266,7 +334,7 @@ pub struct Function {
 #[derive(Debug, Clone, Copy)]
 pub struct Parameter {
 	pub type_id: TypeId,
-	pub is_mutable: bool,
+	pub mutable: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -295,6 +363,24 @@ pub enum FormatStringItem<'a> {
 #[derive(Debug)]
 pub struct FormatStringLiteral<'a> {
 	pub items: Vec<FormatStringItem<'a>>,
+}
+
+impl<'a> FormatStringLiteral<'a> {
+	pub fn new() -> Self {
+		Self { items: Vec::new() }
+	}
+
+	pub fn with_capacity(capacity: usize) -> Self {
+		Self { items: Vec::with_capacity(capacity) }
+	}
+
+	pub fn is_empty(&self) -> bool {
+		self.items.is_empty()
+	}
+
+	pub fn len(&self) -> usize {
+		self.items.len()
+	}
 }
 
 #[derive(Debug)]
