@@ -18,7 +18,7 @@ pub struct Cli {
 
 	/// only check the code, do not build.
 	#[arg(long)]
-	pub check_only: bool,
+	pub check: bool,
 
 	/// emit intermediate representations (AST, HIR, MIR, LLVMIR).
 	#[arg(long, value_enum, value_delimiter = ',', value_name = "STAGES")]
@@ -158,7 +158,7 @@ impl Default for CompilerOptions {
 
 impl Cli {
 	pub fn mode(&self) -> Mode {
-		if self.check_only {
+		if self.check {
 			Mode::CheckOnly
 		} else if !self.emit.is_empty() {
 			Mode::EmitStages(self.emit.clone())
