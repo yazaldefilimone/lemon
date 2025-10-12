@@ -21,8 +21,10 @@ pub fn check_statement<'a, 'b>(
 			None
 		}
 		ast::Statement::Expression(expression) => {
-			let hir_expression = super::expressions::check_expression(ctx, expression);
-			Some(hir::Statement::Expression(hir_expression))
+			let expression = super::expressions::check_expression(ctx, expression);
+			let span = expression.span.clone();
+			let kind = hir::StatementKind::Expression(expression);
+			Some(hir::Statement::new(kind, span))
 		}
 		_ => todo!(),
 	}
