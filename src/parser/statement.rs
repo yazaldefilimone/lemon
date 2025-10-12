@@ -1,7 +1,8 @@
 use crate::{
-	ast::{self, Node},
+	ast::{self, Node, Parameters},
 	error,
 	messages::Messages,
+	parser::check_not_reserved,
 	token::{Token, TokenKind},
 	token_reader::TokenReader,
 };
@@ -153,14 +154,21 @@ fn parse_function_statement<'a>(
 fn parse_function_parameters<'a>(
 	reader: &mut TokenReader<'a>,
 	messages: &mut Messages,
-) -> Result<Vec<ast::Parameter<'a>>> {
-	reader.expect(TokenKind::OpenParen, messages)?;
+) -> Result<Node<Parameters<'a>>> {
+	let open_paren = reader.expect(TokenKind::OpenParen, messages)?;
 	let mut parameters = Vec::new();
+	let mut c_varargs = None;
+	reader.read_newlines();
+
 	while let Ok(token) = reader.peek() {
 		if token.kind == TokenKind::CloseParen {
 			break;
 		}
-
+		if reader.peek_kind() == Ok(TokenKind::TripleDot) {
+			let triple_dot = reader.next(messages)?;
+			c_varargs = Some(triple_dot.span);
+			break;
+		}
 		let parameter = parse_function_parameter(reader, messages)?;
 		parameters.push(parameter);
 
@@ -169,20 +177,27 @@ fn parse_function_parameters<'a>(
 			break;
 		}
 	}
-	reader.expect(TokenKind::CloseParen, messages)?;
-	Ok(parameters)
+	let close_paren = reader.expect(TokenKind::CloseParen, messages)?;
+
+	let parameters = ast::Parameters { parameters, c_varargs };
+
+	Ok(ast::Node::new(parameters, open_paren.span + close_paren.span))
 }
 
 fn parse_function_parameter<'a>(
 	reader: &mut TokenReader<'a>,
 	messages: &mut Messages,
-) -> Result<ast::Parameter<'a>> {
+) -> Result<ast::Node<ast::Parameter<'a>>> {
 	let name = reader.expect(TokenKind::Word, messages)?;
 	reader.expect(TokenKind::Colon, messages)?;
 	let param_type = super::parse_type(reader, messages)?;
 
+	check_not_reserved(messages, name, "parameter label")?;
+
 	let name_node = ast::Node::from_token(name.text, name);
-	Ok(ast::Parameter { name: name_node, param_type, mutable: false })
+
+	let span = name.span + param_type.span;
+	Ok(Node::new(ast::Parameter { name: name_node, param_type, mutable: false }, span))
 }
 
 fn parse_return_statement<'a>(
