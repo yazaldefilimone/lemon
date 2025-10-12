@@ -1,34 +1,25 @@
-use crate::{ast, hir, messages::Message};
-pub mod context;
-pub mod expressions;
-pub mod functions;
-pub mod statements;
-pub mod synthesis;
-pub mod types;
-pub mod variables;
+use crate::{ast, context};
+use context::Context;
+mod attributes;
+mod expressions;
+mod functions;
+mod patterns;
+mod statements;
+mod types;
 
-pub type Result<T> = std::result::Result<T, Message>;
-
-pub fn check_file<'a, 'b>(
-	ctx: &mut context::Context<'a, 'b>,
-	file: &'a ast::File<'a>,
-) -> Result<hir::File<'a>> {
-	let block = check_block(ctx, &file.block)?;
-
-	match synthesis::synthesise_block(ctx, &file.block) {
-		Ok(typed) => {}
-		Err(message) => return Err(message),
-	}
-	return Ok(hir::File::new(block, &file.file));
+pub fn check_file<'a, 'b>(ctx: &mut Context<'a, 'b>, ast_file: &ast::File<'a>) {
+	check_block(ctx, &ast_file.block);
 }
 
-pub fn check_block<'a, 'b>(
-	ctx: &mut context::Context<'a, 'b>,
-	block: &'a ast::Block<'a>,
-) -> Result<hir::Block<'a>> {
-	let mut hir_block = hir::Block::new();
-	for statement in &block.statements {
-		// let statement = check_statement(ctx, statement)?;
+fn check_block<'a, 'b>(ctx: &mut Context<'a, 'b>, block: &ast::Block<'a>) {
+	for statement in block.statements.iter() {
+		check_statement(ctx, statement);
 	}
-	return Ok(hir_block);
+}
+
+fn check_statement<'a, 'b>(ctx: &mut Context<'a, 'b>, statement: &ast::Statement<'a>) {
+	match statement {
+		ast::Statement::Function(function) => functions::check_function(ctx, function),
+		_ => todo!(),
+	}
 }
