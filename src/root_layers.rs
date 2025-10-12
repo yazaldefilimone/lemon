@@ -1,4 +1,4 @@
-use crate::{ast::Node, reference::Ref, symbols::scope::Symbols};
+use crate::{ast, reference::Ref, symbols::scope::Symbols};
 use rustc_hash::FxHashMap;
 
 #[derive(Debug)]
@@ -26,30 +26,15 @@ impl<'a> RootLayers<'a> {
 		Self { root, root_name: root_name.to_string() }
 	}
 
-	pub fn import(&mut self, path: &'a [&str]) -> Ref<RootLayer<'a>> {
-		let mut current = self.root.clone();
-
-		for segment in path {
-			let module = current.inner_mut();
-			let child = module.children.entry(*segment);
-			let child = child.or_insert_with(|| Ref::new(RootLayer::new(segment))).clone();
-			current = child;
-		}
-		current
+	pub fn import(&mut self, path: &'a str) -> Ref<RootLayer<'a>> {
+		todo!()
 	}
 
-	pub fn lookup(&self, path: &[&str]) -> Option<Ref<RootLayer>> {
-		let mut current = self.root.clone();
-
-		for segment in path {
-			let module = current.inner();
-			let child = module.children.get(*segment)?.clone();
-			current = child;
-		}
-		Some(current)
+	pub fn lookup(&self, path: &'a str) -> Option<Ref<RootLayer<'a>>> {
+		todo!()
 	}
 
-	pub fn layer_for_module_name(&self, name: &Node<&'a str>) -> Option<Ref<RootLayer<'a>>> {
+	pub fn layer_for_module_name(&self, name: &ast::Node<&'a str>) -> Option<Ref<RootLayer<'a>>> {
 		if let Some(layer) = self.root.children.get(name.item) {
 			return Some(layer.clone());
 		}
