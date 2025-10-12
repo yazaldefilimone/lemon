@@ -6,7 +6,7 @@ use crate::{
 
 pub fn check_expression<'a, 'b>(
 	ctx: &mut Context<'a, 'b>,
-	expr_node: &'a ast::Node<ast::Expression<'b>>,
+	expr_node: &ast::Node<ast::Expression<'a>>,
 ) -> hir::Expression<'b> {
 	let span = expr_node.span;
 	match &expr_node.item {
@@ -26,7 +26,7 @@ pub fn check_expression<'a, 'b>(
 
 pub fn check_number_literal<'a, 'b>(
 	ctx: &mut Context<'a, 'b>,
-	literal: &'a ast::NumberLiteral,
+	literal: &ast::NumberLiteral,
 ) -> hir::Expression<'b> {
 	let span = literal.value.span;
 	let value = literal.value.item.clone();
@@ -73,11 +73,15 @@ pub fn check_format_string_literal<'a, 'b>(
 ) -> hir::Expression<'b> {
 	let span = literal.span;
 	let value = literal.item.clone();
-	let format_string_value = hir::FormatStringLiteral;
-
+	// let format_string_value = hir::FormatStringLiteral;
+	let format_string_literal = hir::FormatStringLiteral::new();
 	let type_id = ctx.type_store.builtin.format_string;
 
-	let kind = hir::ExpressionKind::FormatStringLiteral(format_string_value);
+	for format_string_item in literal.item.items.iter() {
+		// format_string_literal.add_argument(check_expression(ctx, arg));
+	}
+
+	let kind = hir::ExpressionKind::FormatStringLiteral(format_string_literal);
 
 	hir::Expression::new(type_id, kind, span)
 }
@@ -87,12 +91,13 @@ pub fn check_call<'a, 'b>(
 	call: ast::Node<&ast::Call<'a>>,
 ) -> hir::Expression<'b> {
 	let span = call.span;
-	let callee = check_expression(ctx, call.item.callee);
-	let arguments = call.item.arguments.iter().map(|arg| check_expression(ctx, arg)).collect();
+	// let callee = check_expression(ctx, call.item.);
+	// let arguments = call.item.arguments.iter().map(|arg| check_expression(ctx, arg)).collect();
 
-	let type_id = ctx.type_store.builtin.function;
+	// let type_id = ctx.type_store.builtin.function;
 
-	let kind = hir::ExpressionKind::Call(callee, arguments);
+	// let kind = hir::ExpressionKind::Call(callee, arguments);
 
-	hir::Expression::new(type_id, kind, span)
+	todo!()
+	// hir::Expression::new(type_id, kind, span)
 }
