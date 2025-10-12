@@ -3,12 +3,7 @@ use std::cmp::Ordering;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 
-use crate::{
-	checker::types::{store::TypeStore, TypeId},
-	error,
-	messages::Messages,
-	span::Span,
-};
+use crate::{ast, error, messages::Messages, span::Span, store::type_store, types::TypeId};
 
 #[derive(Debug, Copy, Clone)]
 pub struct NumberValue {
@@ -29,6 +24,10 @@ impl NumberValue {
 		NumberValue { value, span, collapse: None }
 	}
 
+	pub fn from_node(node: &ast::Node<Decimal>) -> NumberValue {
+		NumberValue::new(node.item, node.span)
+	}
+
 	pub fn new_collapsed(value: Decimal, span: Span, collapse: TypeId) -> NumberValue {
 		NumberValue { value, span, collapse: Some(collapse) }
 	}
@@ -42,10 +41,10 @@ impl NumberValue {
 	}
 
 	// return value indicates success if true
-	pub fn collapse(&mut self, type_store: &TypeStore, type_id: TypeId) -> bool {
+	pub fn collapse(&mut self, store: &type_store::TypeStore, type_id: TypeId) -> bool {
 		let mut success = true;
 		if let Some(collapsed) = self.collapse {
-			success = type_store.direct_match(collapsed, type_id);
+			success = store.direct_match(collapsed, type_id);
 		}
 		self.collapse = Some(type_id);
 		success
