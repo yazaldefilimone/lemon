@@ -1,9 +1,5 @@
 use crate::{
-	checker::{context, types},
-	cli::CompilerOptions,
-	messages::Messages,
-	parser::parse_file,
-	resolver::loader::load_single_file,
+	cli::CompilerOptions, messages::Messages, parser::parse_file, resolver::loader::load_single_file,
 };
 
 mod ast;
@@ -11,8 +7,10 @@ mod checker;
 mod cli;
 mod color;
 mod comptime;
+mod context;
 mod hir;
 mod lexer;
+mod linker;
 mod llvm;
 mod macros;
 mod messages;
@@ -22,12 +20,14 @@ mod reference;
 mod resolver;
 mod root_layers;
 mod span;
+mod store;
 mod symbols;
 mod token;
 mod token_reader;
+mod types;
 
 fn check(path: &std::path::Path) {
-	let options = CompilerOptions::default();
+	let compiler_options = CompilerOptions::default();
 	let mut files = Vec::new();
 	let index = files.len() as u32;
 	if let Err(e) = load_single_file(path.to_path_buf(), &mut files) {
@@ -40,18 +40,22 @@ fn check(path: &std::path::Path) {
 	let mut token_reader = lexer.reader(&mut messages);
 	let ast_file = parse_file(&file, &mut token_reader, &mut messages);
 	messages.print("parser");
-	let mut type_store = types::store::TypeStore::new();
-	let mut function_store = types::store::FunctionStore::new();
+	let mut type_store = store::type_store::TypeStore::new();
+	let mut function_store = store::function_store::FunctionStore::new();
 	let mut readables = symbols::Readables::new();
+	let mut constants = Vec::new();
+	let mut root_layers = root_layers::RootLayers::new("");
 
 	let mut ctx = context::Context::new(
-		index,
-		&options,
+		&compiler_options,
 		&mut messages,
 		&mut type_store,
 		&mut function_store,
+		&mut constants,
 		&mut readables,
+		&mut root_layers,
 	);
+
 	checker::check_file(&mut ctx, &ast_file);
 
 	ctx.messages.print("checker");
