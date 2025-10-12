@@ -1,9 +1,9 @@
 use crate::{
 	ast::Node,
-	checker::types::store::TypeStore,
 	error,
 	messages::Messages,
 	root_layers::RootLayers,
+	store::type_store::TypeStore,
 	symbols::{Symbol, SymbolKind},
 	warning,
 };
@@ -29,6 +29,7 @@ impl<'a> Symbols<'a> {
 		SymbolsScope { symbols: self, initial_symbols_length }
 	}
 
+	// todo: refactor
 	pub fn push_symbol(
 		&mut self,
 		messages: &mut Messages,
@@ -52,6 +53,7 @@ impl<'a> Symbols<'a> {
 		self.symbols.push(symbol);
 	}
 
+	// todo: refactor
 	pub fn find_symbol_matching_name(
 		&mut self,
 		name: &str,
@@ -90,7 +92,7 @@ impl<'a> Symbols<'a> {
 		scope_start: usize,
 		name: Node<&'a str>,
 	) -> Option<Symbol<'a>> {
-		let primatives = &type_store.primative_type_symbols;
+		let primatives = &type_store.primitive_symbols;
 		if let Some(found) = primatives.iter().find(|symbol| symbol.name == name.item) {
 			return Some(found.clone());
 		}
